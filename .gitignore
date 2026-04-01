@@ -1,0 +1,22 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform.lock.hcl
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Plan files
+*.tfplan
+tfplan
+
+# Local files
+*.pem
+*.key
+*.env
+
+# Kubernetes local config
+kubeconfig
