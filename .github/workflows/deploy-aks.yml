@@ -1,0 +1,67 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "k8s/**"
+      - ".github/workflows/deploy-aks.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: acraksdemodev1h7qqd
+  ACR_LOGIN_SERVER: acraksdemodev1h7qqd.azurecr.io
+  AKS_RESOURCE_GROUP: REPLACE_WITH_RG_NAME
+  AKS_CLUSTER_NAME: REPLACE_WITH_AKS_NAME
+  IMAGE_NAME: ram-aks-web
+  DEPLOYMENT_NAME: ram-webapp
+  CONTAINER_NAME: ram-webapp
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build Docker image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::7}
+          docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ./app
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Push Docker image to ACR
+        run: |
+          az acr login --name $ACR_NAME
+          docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group $AKS_RESOURCE_GROUP \
+            --name $AKS_CLUSTER_NAME \
+            --overwrite-existing
+
+      - name: Deploy new image to AKS
+        run: |
+          kubectl set image deployment/$DEPLOYMENT_NAME \
+            $CONTAINER_NAME=$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+
+      - name: Validate rollout
+        run: |
+          kubectl rollout status deployment/$DEPLOYMENT_NAME
+          kubectl get pods
+          kubectl get svc
