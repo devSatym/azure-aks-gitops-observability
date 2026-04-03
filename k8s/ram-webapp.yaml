@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: ram-webapp
-          image: acraksdemodev1h7qqd.azurecr.io/ram-aks-web:v1
+          image: acraksdemodevaafof8.azurecr.io/ram-aks-web:v1
           ports:
             - containerPort: 80
 ---
