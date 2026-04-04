@@ -43,12 +43,15 @@ jobs:
           echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
           echo "AKS_RESOURCE_GROUP=$AKS_RESOURCE_GROUP"
           echo "AKS_CLUSTER_NAME=$AKS_CLUSTER_NAME"
+          echo "IMAGE_NAME=$IMAGE_NAME"
+          echo "DEPLOYMENT_NAME=$DEPLOYMENT_NAME"
+          echo "CONTAINER_NAME=$CONTAINER_NAME"
 
       - name: Build Docker image
         run: |
           IMAGE_TAG=${GITHUB_SHA::7}
-          docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ./app
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ./app
 
       - name: Push Docker image to ACR
         run: |
@@ -62,10 +65,21 @@ jobs:
             --name $AKS_CLUSTER_NAME \
             --overwrite-existing
 
+      - name: Check AKS deployment and container
+        run: |
+          kubectl get nodes
+          kubectl get deployment $DEPLOYMENT_NAME
+          kubectl get deployment $DEPLOYMENT_NAME -o jsonpath="{.spec.template.spec.containers[*].name}"
+          echo ""
+
       - name: Deploy new image to AKS
         run: |
-          kubectl set image deployment/$DEPLOYMENT_NAME \
-            $CONTAINER_NAME=$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+          echo "Updating deployment: $DEPLOYMENT_NAME"
+          echo "Container name: $CONTAINER_NAME"
+          echo "New image: $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
+
+          kubectl set image deployment/${DEPLOYMENT_NAME} \
+            ${CONTAINER_NAME}=$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
 
       - name: Validate rollout
         run: |
