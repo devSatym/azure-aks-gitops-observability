@@ -14,13 +14,13 @@ permissions:
   contents: read
 
 env:
-  ACR_NAME: acraksdemodev1h7qqd
-  ACR_LOGIN_SERVER: acraksdemodev1h7qqd.azurecr.io
-  AKS_RESOURCE_GROUP: REPLACE_WITH_RG_NAME
-  AKS_CLUSTER_NAME: REPLACE_WITH_AKS_NAME
-  IMAGE_NAME: ram-aks-web
-  DEPLOYMENT_NAME: ram-webapp
-  CONTAINER_NAME: ram-webapp
+    ACR_NAME: ${{ vars.ACR_NAME }}
+    ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+    AKS_RESOURCE_GROUP: ${{ vars.AKS_RESOURCE_GROUP }}
+    AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+    IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+    DEPLOYMENT_NAME: ${{ vars.DEPLOYMENT_NAME }}
+    CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
 
 jobs:
   build-and-deploy:
