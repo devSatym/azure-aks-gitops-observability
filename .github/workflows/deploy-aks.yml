@@ -39,13 +39,23 @@ jobs:
 
       - name: Debug variables
         run: |
-          echo "ACR_NAME=$ACR_NAME"
-          echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
-          echo "AKS_RESOURCE_GROUP=$AKS_RESOURCE_GROUP"
-          echo "AKS_CLUSTER_NAME=$AKS_CLUSTER_NAME"
-          echo "IMAGE_NAME=$IMAGE_NAME"
-          echo "DEPLOYMENT_NAME=$DEPLOYMENT_NAME"
-          echo "CONTAINER_NAME=$CONTAINER_NAME"
+          echo "ACR_NAME=[$ACR_NAME]"
+          echo "ACR_LOGIN_SERVER=[$ACR_LOGIN_SERVER]"
+          echo "AKS_RESOURCE_GROUP=[$AKS_RESOURCE_GROUP]"
+          echo "AKS_CLUSTER_NAME=[$AKS_CLUSTER_NAME]"
+          echo "IMAGE_NAME=[$IMAGE_NAME]"
+          echo "DEPLOYMENT_NAME=[$DEPLOYMENT_NAME]"
+          echo "CONTAINER_NAME=[$CONTAINER_NAME]"
+
+      - name: Clean variable spaces
+        run: |
+          echo "ACR_NAME=$(echo "$ACR_NAME" | xargs)" >> $GITHUB_ENV
+          echo "ACR_LOGIN_SERVER=$(echo "$ACR_LOGIN_SERVER" | xargs)" >> $GITHUB_ENV
+          echo "AKS_RESOURCE_GROUP=$(echo "$AKS_RESOURCE_GROUP" | xargs)" >> $GITHUB_ENV
+          echo "AKS_CLUSTER_NAME=$(echo "$AKS_CLUSTER_NAME" | xargs)" >> $GITHUB_ENV
+          echo "IMAGE_NAME=$(echo "$IMAGE_NAME" | xargs)" >> $GITHUB_ENV
+          echo "DEPLOYMENT_NAME=$(echo "$DEPLOYMENT_NAME" | xargs)" >> $GITHUB_ENV
+          echo "CONTAINER_NAME=$(echo "$CONTAINER_NAME" | xargs)" >> $GITHUB_ENV
 
       - name: Build Docker image
         run: |
@@ -65,21 +75,13 @@ jobs:
             --name $AKS_CLUSTER_NAME \
             --overwrite-existing
 
-      - name: Check AKS deployment and container
+      - name: Deploy app to AKS
         run: |
-          kubectl get nodes
-          kubectl get deployment $DEPLOYMENT_NAME
-          kubectl get deployment $DEPLOYMENT_NAME -o jsonpath="{.spec.template.spec.containers[*].name}"
-          echo ""
+          echo "Updating Kubernetes manifest image"
+          sed -i "s|image: .*ram-aks-web:.*|image: $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG|g" k8s/ram-webapp.yaml
 
-      - name: Deploy new image to AKS
-        run: |
-          echo "Updating deployment: $DEPLOYMENT_NAME"
-          echo "Container name: $CONTAINER_NAME"
-          echo "New image: $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG"
-
-          kubectl set image deployment/${DEPLOYMENT_NAME} \
-            ${CONTAINER_NAME}=$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+          echo "Applying Kubernetes manifest"
+          kubectl apply -f k8s/ram-webapp.yaml
 
       - name: Validate rollout
         run: |
