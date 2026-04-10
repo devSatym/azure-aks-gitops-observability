@@ -20,6 +20,9 @@ resource "azurerm_kubernetes_cluster" "this" {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
   }
+  oms_agent {
+    log_analytics_workspace_id = var.log_analytics_workspace_id
+  }
 
   tags = var.tags
 }

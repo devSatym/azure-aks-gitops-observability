@@ -41,17 +41,27 @@ module "acr" {
   tags                = local.tags
 }
 
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  name_prefix         = local.name_prefix
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
+  tags                = local.tags
+}
+
 module "aks" {
   source = "./modules/aks"
 
-  resource_group_name = module.resource_group.name
-  location            = module.resource_group.location
-  aks_name            = "aks-${local.name_prefix}"
-  dns_prefix          = "aks-${var.project_name}-${random_string.suffix.result}"
-  subnet_id           = module.network.aks_subnet_id
-  node_count          = var.node_count
-  node_vm_size        = var.node_vm_size
-  tags                = local.tags
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  aks_name                   = "aks-${local.name_prefix}"
+  dns_prefix                 = "aks-${var.project_name}-${random_string.suffix.result}"
+  subnet_id                  = module.network.aks_subnet_id
+  node_count                 = var.node_count
+  node_vm_size               = var.node_vm_size
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.tags
 }
 
 resource "azurerm_role_assignment" "aks_acr_pull" {
