@@ -27,3 +27,8 @@ variable "node_vm_size" {
   type        = string
   default     = "Standard_B2s"
 }
+
+variable "alert_email" {
+  type        = string
+  description = "Email address for AKS monitoring alerts"
+}

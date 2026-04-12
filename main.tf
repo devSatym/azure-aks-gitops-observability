@@ -50,6 +50,17 @@ module "monitoring" {
   tags                = local.tags
 }
 
+module "alerts" {
+  source = "./modules/alerts"
+
+  name_prefix                = local.name_prefix
+  location                   = module.resource_group.location
+  resource_group_name        = module.resource_group.name
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  alert_email                = var.alert_email
+  tags                       = local.tags
+}
+
 module "aks" {
   source = "./modules/aks"
 
