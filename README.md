@@ -1,62 +1,87 @@
-# Azure AKS Container Platform with Terraform, GitHub Actions and Monitoring
+# Azure AKS Container Platform
 
-## Project Overview
+A modular Azure Kubernetes Service platform built with Terraform, Docker, Azure Container Registry, GitHub Actions, Kubernetes, and Azure-native monitoring. The platform is being extended with Helm, Prometheus, Grafana, and Argo CD to demonstrate application packaging, observability, and GitOps-based delivery.
 
-Designed and implemented a containerised application platform on Azure using **AKS, ACR, Terraform, GitHub Actions, Azure Monitor, Log Analytics, Container Insights, and alerting**.
-
-The project demonstrates Infrastructure as Code, secure CI/CD automation, Kubernetes workload deployment, monitoring, and operational alerting.
-
----
+The project demonstrates Infrastructure as Code, secure CI/CD authentication, automated workload deployment, monitoring, and operational alerting.
 
 ## Architecture
 
-![Architecture Diagram](docs/architecture/architecture-diagram.png)
-
----
-
-## Solution Flow
+![Azure AKS Platform Architecture](docs/architecture/architecture-diagram.png)
 
 ```text
 Developer
-→ GitHub Repository
-→ GitHub Actions
-→ Docker Build
-→ Azure Container Registry
-→ AKS Cluster
-→ Kubernetes Service LoadBalancer
-→ Browser
+   │
+   ▼
+GitHub Repository
+   │
+   ▼
+GitHub Actions
+   │
+   ├── Authenticate to Azure using OIDC
+   ├── Build Docker image
+   ├── Push image to ACR
+   └── Deploy application to AKS
+                         │
+                         ▼
+                LoadBalancer Service
+                         │
+                         ▼
+                    Application
 ```
 
 Monitoring flow:
 
 ```text
-AKS Cluster
+AKS
 → Container Insights
 → Log Analytics Workspace
-→ Alert Rules
+→ Azure Monitor Alerts
 → Action Group
-→ Email Notification
 ```
 
----
+## Design Principles
 
-## Technologies Used
+The platform applies Azure architecture and Well-Architected principles through:
 
-| Area | Tools |
-|---|---|
-| Cloud | Azure |
-| Infrastructure as Code | Terraform |
-| Containers | Docker, AKS, ACR |
-| CI/CD | GitHub Actions |
-| Authentication | OIDC |
-| Kubernetes | Deployment, Pods, Service LoadBalancer |
-| Monitoring | Azure Monitor, Container Insights |
-| Logging | Log Analytics Workspace |
-| Alerting | Azure Monitor Alerts, Action Group |
+* **Infrastructure as Code:** Modular Terraform provides consistent and repeatable deployments.
+* **Secure automation:** GitHub Actions uses OIDC instead of stored Azure credentials.
+* **Operational excellence:** Automated deployment, rollout validation, centralised logging, and alerts improve operational visibility.
+* **Reliability:** Kubernetes health checks and alerts help identify node and workload failures.
+* **Observability:** Azure Monitor, Container Insights, and Log Analytics provide cluster and workload health data.
+* **Cost awareness:** Lab resources can be destroyed when not required.
 
----
+The design is informed by the Azure Well-Architected Framework, Azure Architecture Center AKS guidance, and Cloud Adoption Framework landing-zone principles.
 
-## Terraform Modules
+## Technology Stack
+
+| Area                   | Technology                                |
+| ---------------------- | ----------------------------------------- |
+| Cloud                  | Microsoft Azure                           |
+| Infrastructure as Code | Terraform                                 |
+| Containers             | Docker, AKS and ACR                       |
+| CI/CD                  | GitHub Actions                            |
+| Authentication         | OpenID Connect                            |
+| Kubernetes             | Deployment, Pods and LoadBalancer Service |
+| Monitoring             | Azure Monitor and Container Insights      |
+| Logging                | Log Analytics Workspace                   |
+| Alerting               | Azure Monitor Alerts and Action Groups    |
+
+## Infrastructure
+
+Terraform provisions the following resources:
+
+```text
+Resource Group
+Virtual Network and Subnet
+Azure Container Registry
+Azure Kubernetes Service
+Log Analytics Workspace
+Container Insights
+Alert Rules
+Action Group
+```
+
+Terraform module structure:
 
 ```text
 modules/
@@ -68,74 +93,43 @@ modules/
 └── alerts/
 ```
 
-Terraform provisions:
-
-```text
-Resource Group
-VNet/Subnet
-Azure Container Registry
-AKS Cluster
-Log Analytics Workspace
-Container Insights
-Alert Rules
-Action Group
-```
-
----
-
 ## CI/CD Pipeline
 
-GitHub Actions workflow:
+The GitHub Actions workflow:
 
-```text
-1. Login to Azure using OIDC
-2. Build Docker image
-3. Push image to ACR
-4. Get AKS credentials
-5. Apply Kubernetes manifest
-6. Validate rollout
-```
-
-Workflow file:
+1. Authenticates to Azure using OIDC.
+2. Builds the Docker image.
+3. Pushes the image to Azure Container Registry.
+4. Retrieves AKS credentials.
+5. Applies the Kubernetes manifest.
+6. Validates the deployment rollout.
 
 ```text
 .github/workflows/deploy-aks.yml
 ```
 
----
+## Kubernetes Workload
 
-## Monitoring and Alerts
+The application is deployed using:
 
-Monitoring is enabled using **Azure Monitor, Container Insights, and Log Analytics**.
+* Kubernetes Deployment
+* Application Pods
+* Azure LoadBalancer Service
+* Container image stored in ACR
+* Rollout validation through `kubectl`
 
-Configured alerts:
+## Monitoring and Alerting
 
-```text
-Node Not Ready
-Pod Failed / CrashLoopBackOff
-Pod Restarts
-```
+Azure Monitor, Container Insights, and Log Analytics provide visibility into AKS cluster and workload health.
 
----
+Configured alert scenarios include:
 
-## Validation Commands
+* Node unavailable or not ready
+* Failed pods
+* Pod restart increases
+* Workload health degradation
 
-```bash
-kubectl get nodes
-kubectl get pods
-kubectl get svc
-kubectl get deployment
-kubectl rollout status deployment/ram-webapp
-```
-
-ACR validation:
-
-```bash
-az acr repository list --name <acr-name> --output table
-az acr repository show-tags --name <acr-name> --repository ram-aks-web --output table
-```
-
-Log Analytics query:
+Example Log Analytics query:
 
 ```kql
 KubePodInventory
@@ -144,80 +138,77 @@ KubePodInventory
 | order by TimeGenerated desc
 ```
 
----
+## Validation
 
-## Screenshots
+```bash
+kubectl get nodes
+kubectl get deployments
+kubectl get pods
+kubectl get services
+kubectl rollout status deployment/ram-webapp
+```
 
-### GitHub Actions Success
+Validate the container image:
+
+```bash
+az acr repository show-tags \
+  --name <acr-name> \
+  --repository ram-aks-web \
+  --output table
+```
+
+## Project Evidence
+
+### GitHub Actions Deployment
 
 ![GitHub Actions Success](docs/screenshots/02-github-actions-success.png)
 
-### Azure Resource Group
+### Azure Resources
 
 ![Azure Resource Group](docs/screenshots/03-azure-resource-group.png)
 
-### AKS Cluster Overview
-
-![AKS Cluster Overview](docs/screenshots/04-aks-cluster-overview.png)
-
-### ACR Image Repository
-
-![ACR Image Repository](docs/screenshots/05-acr-image-repository.png)
-
-### Kubernetes Pods and Service
+### Kubernetes Workload
 
 ![Kubernetes Pods and Service](docs/screenshots/06-kubectl-pods-service.png)
 
-### Application Running
+### Application
 
 ![Application Running](docs/screenshots/07-browser-app-running.png)
 
-### Container Insights
+### Monitoring
 
 ![Container Insights](docs/screenshots/08-container-insights.png)
 
-### Log Analytics Query
-
-![Log Analytics Query](docs/screenshots/09-log-analytics-query.png)
-
-### Alert Rules
+### Alerts
 
 ![Alert Rules](docs/screenshots/10-alert-rules-action-group.png)
 
----
-
 ## Key Outcomes
 
-This project demonstrates:
-
-```text
-Scalable containerised application deployment on AKS
-Secure CI/CD using GitHub Actions and OIDC
-Infrastructure provisioning using modular Terraform
-Container image management using ACR
-Operational monitoring using Azure Monitor and Log Analytics
-Proactive alerting for AKS workload health
-```
-
----
+* Provisioned Azure infrastructure using modular Terraform.
+* Automated Docker image build and AKS deployment using GitHub Actions.
+* Implemented secure Azure authentication using OIDC.
+* Integrated ACR with the AKS application delivery workflow.
+* Centralised Kubernetes logs and health data in Log Analytics.
+* Configured proactive monitoring and operational alerts.
 
 ## Cleanup
 
-To avoid ongoing Azure cost:
+To avoid unnecessary Azure charges:
 
 ```bash
 terraform destroy
 ```
 
----
+## Roadmap
 
-## Future Enhancements
-
-```text
-Helm chart for application deployment
-Prometheus and Grafana dashboards
-ArgoCD for GitOps deployment
-Azure Key Vault for secrets
-Terraform remote backend using Azure Storage Account
-Ingress Controller and TLS
-```
+* Terraform remote backend using Azure Storage
+* Azure Key Vault integration
+* Microsoft Entra Workload ID
+* Private AKS and private ACR connectivity
+* Azure Policy for AKS governance
+* Helm-based application deployment
+* Prometheus and Grafana dashboards
+* Argo CD GitOps deployment
+* Ingress controller and TLS
+* Horizontal Pod Autoscaler
