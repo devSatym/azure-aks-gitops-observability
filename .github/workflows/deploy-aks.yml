@@ -1,4 +1,4 @@
-name: Build and Deploy to AKS
+name: Build and Deploy to AKS using Helm
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "app/**"
-      - "k8s/**"
+      - "helm/**"
       - ".github/workflows/deploy-aks.yml"
 
 permissions:
@@ -20,7 +20,6 @@ env:
   AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
   DEPLOYMENT_NAME: ${{ vars.DEPLOYMENT_NAME }}
-  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
 
 jobs:
   build-and-deploy:
@@ -45,7 +44,6 @@ jobs:
           echo "AKS_CLUSTER_NAME=[$AKS_CLUSTER_NAME]"
           echo "IMAGE_NAME=[$IMAGE_NAME]"
           echo "DEPLOYMENT_NAME=[$DEPLOYMENT_NAME]"
-          echo "CONTAINER_NAME=[$CONTAINER_NAME]"
 
       - name: Clean variable spaces
         run: |
@@ -55,7 +53,6 @@ jobs:
           echo "AKS_CLUSTER_NAME=$(echo "$AKS_CLUSTER_NAME" | xargs)" >> $GITHUB_ENV
           echo "IMAGE_NAME=$(echo "$IMAGE_NAME" | xargs)" >> $GITHUB_ENV
           echo "DEPLOYMENT_NAME=$(echo "$DEPLOYMENT_NAME" | xargs)" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=$(echo "$CONTAINER_NAME" | xargs)" >> $GITHUB_ENV
 
       - name: Build Docker image
         run: |
@@ -75,16 +72,15 @@ jobs:
             --name $AKS_CLUSTER_NAME \
             --overwrite-existing
 
-      - name: Deploy app to AKS
+      - name: Deploy app to AKS using Helm
         run: |
-          echo "Updating Kubernetes manifest image"
-          sed -i "s|image: .*ram-aks-web:.*|image: $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG|g" k8s/ram-webapp.yaml
-
-          echo "Applying Kubernetes manifest"
-          kubectl apply -f k8s/ram-webapp.yaml
+          helm upgrade --install ram-webapp ./helm/ram-webapp \
+            --set image.repository=$ACR_LOGIN_SERVER/$IMAGE_NAME \
+            --set image.tag=$IMAGE_TAG
 
       - name: Validate rollout
         run: |
           kubectl rollout status deployment/$DEPLOYMENT_NAME
           kubectl get pods
           kubectl get svc
+          helm list
