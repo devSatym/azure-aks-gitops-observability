@@ -1,8 +1,8 @@
 # Azure AKS Container Platform
 
-A modular Azure Kubernetes Service platform built with Terraform, Docker, Azure Container Registry, GitHub Actions, Helm, Kubernetes, and Azure-native monitoring.
+A modular Azure Kubernetes Service platform built with Terraform, Docker, Azure Container Registry, GitHub Actions, Helm, Kubernetes, Azure Monitor, Prometheus, and Grafana.
 
-The project demonstrates Infrastructure as Code, secure CI/CD authentication, container image delivery, Helm-based application deployment, AKS monitoring, and operational alerting.
+The project demonstrates Infrastructure as Code, secure CI/CD authentication, container image delivery, Helm-based application deployment, AKS monitoring, Kubernetes-native observability, and operational alerting.
 
 ## Architecture
 
@@ -15,6 +15,7 @@ Developer
 → Docker Build
 → Azure Container Registry
 → AKS
+→ Helm Deployment
 → Kubernetes Service LoadBalancer
 → Application
 ```
@@ -29,6 +30,15 @@ AKS
 → Action Group
 ```
 
+Kubernetes-native observability flow:
+
+```text
+AKS
+→ Prometheus
+→ Grafana
+→ Kubernetes Dashboards
+```
+
 ## Key Features
 
 - Modular Terraform infrastructure
@@ -37,7 +47,8 @@ AKS
 - Helm-based AKS application deployment
 - Azure Monitor, Container Insights, and Log Analytics
 - Azure Monitor alert rules and Action Group notifications
-- Kubernetes rollout validation
+- Prometheus and Grafana deployed using Helm
+- Kubernetes rollout validation and dashboard-based observability
 
 ## Technology Stack
 
@@ -51,9 +62,10 @@ AKS
 | CI/CD | GitHub Actions |
 | Authentication | OIDC |
 | Application Packaging | Helm |
-| Monitoring | Azure Monitor, Container Insights |
+| Azure Monitoring | Azure Monitor, Container Insights |
 | Logging | Log Analytics Workspace |
 | Alerting | Azure Monitor Alerts, Action Group |
+| Kubernetes Observability | Prometheus, Grafana |
 
 ## Infrastructure Provisioned
 
@@ -99,7 +111,7 @@ Workflow file:
 .github/workflows/deploy-aks.yml
 ```
 
-## Helm Deployment
+## Helm Application Deployment
 
 The application deployment was upgraded from raw Kubernetes manifests to Helm.
 
@@ -141,7 +153,7 @@ The application runs on AKS using:
 - Kubernetes Service type `LoadBalancer`
 - Container image stored in ACR
 
-## Monitoring and Alerting
+## Azure Monitor and Alerting
 
 Azure Monitor, Container Insights, and Log Analytics provide visibility into AKS cluster and workload health.
 
@@ -161,6 +173,37 @@ KubePodInventory
 | order by TimeGenerated desc
 ```
 
+## Prometheus and Grafana Observability
+
+Prometheus and Grafana were added using Helm through the `kube-prometheus-stack` chart.
+
+The monitoring stack provides Kubernetes-native observability for:
+
+- Cluster health
+- Node resource usage
+- Namespace resource usage
+- Pod resource usage
+- Kubernetes workload dashboards
+
+Installation command:
+
+```bash
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring
+```
+
+Grafana was accessed locally using port forwarding:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+```
+
+Grafana dashboard validated:
+
+```text
+Kubernetes / Compute Resources / Cluster
+```
+
 ## Validation Commands
 
 Validate Kubernetes resources:
@@ -173,11 +216,18 @@ kubectl get svc
 kubectl rollout status deployment/ram-webapp
 ```
 
-Validate Helm release:
+Validate Helm application release:
 
 ```bash
 helm list
 helm status ram-webapp
+```
+
+Validate Prometheus and Grafana stack:
+
+```bash
+kubectl get pods -n monitoring
+helm list -n monitoring
 ```
 
 Validate ACR image tags:
@@ -207,11 +257,11 @@ az acr repository show-tags \
 
 ![Application Running](docs/screenshots/07-browser-app-running.png)
 
-### Monitoring
+### Azure Monitor
 
 ![Container Insights](docs/screenshots/08-container-insights.png)
 
-### Alerts
+### Azure Alerts
 
 ![Alert Rules](docs/screenshots/10-alert-rules-action-group.png)
 
@@ -227,6 +277,14 @@ az acr repository show-tags \
 
 ![Helm Release and AKS Workloads](docs/screenshots/13-helm-release-kubectl-output.png)
 
+### Prometheus and Grafana Pods
+
+![Prometheus Grafana Pods](docs/screenshots/14-monitoring-namespace-pods.png)
+
+### Grafana Dashboard
+
+![Grafana Kubernetes Dashboard](docs/screenshots/16-grafana-kubernetes-cluster-dashboard.png)
+
 ## Key Outcomes
 
 - Provisioned Azure infrastructure using modular Terraform.
@@ -236,10 +294,19 @@ az acr repository show-tags \
 - Upgraded deployment from raw Kubernetes YAML to Helm.
 - Enabled AKS monitoring using Container Insights and Log Analytics.
 - Configured proactive alerting for AKS workload health.
+- Added Prometheus and Grafana for Kubernetes-native observability.
+- Validated Kubernetes cluster metrics through Grafana dashboards.
 
 ## Cleanup
 
-To avoid unnecessary Azure charges:
+To remove Prometheus and Grafana only:
+
+```bash
+helm uninstall kube-prometheus-stack -n monitoring
+kubectl delete namespace monitoring
+```
+
+To destroy all Azure resources:
 
 ```bash
 terraform destroy
@@ -252,7 +319,6 @@ terraform destroy
 - Microsoft Entra Workload ID
 - Private AKS and private ACR connectivity
 - Azure Policy for AKS governance
-- Prometheus and Grafana dashboards
 - Argo CD GitOps deployment
 - Ingress controller and TLS
 - Horizontal Pod Autoscaler
@@ -262,6 +328,6 @@ terraform destroy
 ```text
 Version 1: AKS + Terraform + GitHub Actions + Azure Monitor + Alerts
 Version 2: Helm-based AKS application deployment
-Next: Prometheus + Grafana
-Future: Argo CD GitOps
+Version 3: Prometheus + Grafana observability
+Next: Argo CD GitOps
 ```
