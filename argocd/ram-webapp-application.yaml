@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ram-webapp
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/rambabu-eng/azure-aks-terraform-cicd-monitoring.git
+    targetRevision: main
+    path: helm/ram-webapp
+    helm:
+      parameters:
+        - name: image.repository
+          value: acraksdemodevjv094d.azurecr.io/ram-aks-web
+        - name: image.tag
+          value: v1
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
