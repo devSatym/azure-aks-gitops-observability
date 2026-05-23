@@ -2,7 +2,7 @@
 
 A modular Azure Kubernetes Service platform built with Terraform, Docker, Azure Container Registry, GitHub Actions, Helm, Argo CD, Azure Monitor, Prometheus, and Grafana.
 
-This project demonstrates secure infrastructure provisioning, container image delivery, GitOps deployment, Kubernetes monitoring, and operational alerting.
+This project demonstrates Infrastructure as Code, secure CI authentication, container image delivery, GitOps deployment, Kubernetes monitoring, alerting, and observability.
 
 ## Architecture
 
@@ -15,18 +15,22 @@ GitHub Repository
    ↓
 GitHub Actions
    ↓
-Docker Build → Azure Container Registry
+Docker Build
    ↓
-Argo CD watches Helm chart
+Azure Container Registry
    ↓
-AKS Deployment
+Argo CD
+   ↓
+Helm Chart
+   ↓
+Azure Kubernetes Service
    ↓
 LoadBalancer Service
    ↓
 Application
 ```
 
-Monitoring:
+Monitoring flow:
 
 ```text
 AKS
@@ -42,27 +46,27 @@ AKS
 * Helm-based Kubernetes application packaging
 * Argo CD GitOps deployment and drift reconciliation
 * Azure Monitor, Container Insights, and Log Analytics
-* AKS alert rules with Action Group notifications
+* Azure Monitor alert rules and Action Group notifications
 * Prometheus and Grafana Kubernetes observability
-* Clear separation between CI and GitOps responsibilities
+* Separation of CI image delivery from GitOps deployment
 
 ## Technology Stack
 
-| Area                     | Technology                         |
-| ------------------------ | ---------------------------------- |
-| Cloud                    | Microsoft Azure                    |
-| Infrastructure as Code   | Terraform                          |
-| Container Platform       | Azure Kubernetes Service           |
-| Container Registry       | Azure Container Registry           |
-| Containerisation         | Docker                             |
-| Continuous Integration   | GitHub Actions                     |
-| Authentication           | OpenID Connect                     |
-| Application Packaging    | Helm                               |
-| GitOps                   | Argo CD                            |
-| Azure Monitoring         | Azure Monitor, Container Insights  |
-| Logging                  | Log Analytics                      |
-| Alerting                 | Azure Monitor Alerts, Action Group |
-| Kubernetes Observability | Prometheus, Grafana                |
+| Area                   | Technology                         |
+| ---------------------- | ---------------------------------- |
+| Cloud                  | Microsoft Azure                    |
+| Infrastructure as Code | Terraform                          |
+| Container Platform     | Azure Kubernetes Service           |
+| Container Registry     | Azure Container Registry           |
+| Containerisation       | Docker                             |
+| Continuous Integration | GitHub Actions                     |
+| Authentication         | OpenID Connect                     |
+| Application Packaging  | Helm                               |
+| GitOps                 | Argo CD                            |
+| Monitoring             | Azure Monitor, Container Insights  |
+| Logging                | Log Analytics                      |
+| Alerting               | Azure Monitor Alerts, Action Group |
+| Observability          | Prometheus, Grafana                |
 
 ## Infrastructure
 
@@ -79,7 +83,7 @@ Azure Monitor Alerts
 Action Group
 ```
 
-Module structure:
+Terraform modules:
 
 ```text
 modules/
@@ -91,9 +95,9 @@ modules/
 └── alerts/
 ```
 
-## Delivery Workflow
+## CI and GitOps Workflow
 
-The platform separates image creation from Kubernetes deployment.
+The delivery process separates image creation from Kubernetes deployment.
 
 ### GitHub Actions
 
@@ -103,12 +107,6 @@ GitHub Actions:
 2. Builds the Docker image.
 3. Pushes the image to Azure Container Registry.
 
-Workflow:
-
-```text
-.github/workflows/deploy-aks.yml
-```
-
 ```text
 Git Push
    ↓
@@ -117,6 +115,12 @@ GitHub Actions
 Docker Build
    ↓
 Push Image to ACR
+```
+
+Workflow file:
+
+```text
+.github/workflows/deploy-aks.yml
 ```
 
 ### Argo CD
@@ -145,7 +149,7 @@ Sync Status: Synced
 Health Status: Healthy
 ```
 
-## Helm Deployment
+## Helm Application Deployment
 
 The application was migrated from raw Kubernetes manifests to Helm.
 
@@ -161,7 +165,7 @@ helm/
         └── service.yaml
 ```
 
-Manual Helm deployment:
+Manual deployment command:
 
 ```bash
 helm upgrade --install ram-webapp ./helm/ram-webapp \
@@ -169,7 +173,7 @@ helm upgrade --install ram-webapp ./helm/ram-webapp \
   --set image.tag=<image-tag>
 ```
 
-Helm provides reusable templates, centralised configuration, release history, upgrades, and rollback support.
+Helm provides reusable templates, centralised configuration, release tracking, upgrades, and rollback support.
 
 ## Kubernetes Workload
 
@@ -213,7 +217,7 @@ helm upgrade --install kube-prometheus-stack \
   --create-namespace
 ```
 
-The stack provides visibility into:
+The monitoring stack provides visibility into:
 
 * Cluster health
 * Node resource usage
@@ -236,7 +240,7 @@ Validated dashboard:
 Kubernetes / Compute Resources / Cluster
 ```
 
-## Validation
+## Validation Commands
 
 ### Kubernetes
 
@@ -293,36 +297,36 @@ az acr repository show-tags \
 
 ![Kubernetes Pods and Service](docs/screenshots/06-kubectl-pods-service.png)
 
-### Application
+### Application Running
 
 ![Application Running](docs/screenshots/07-browser-app-running.png)
 
 ### Azure Monitoring and Alerts
 
-![Alert Rules](docs/screenshots/10-alert-rules-action-group.png)
+![Azure Monitor Alert Rules](docs/screenshots/10-alert-rules-action-group.png)
 
 ### Grafana Dashboard
 
 ![Grafana Kubernetes Dashboard](docs/screenshots/16-grafana-kubernetes-cluster-dashboard.png)
 
-### Argo CD Application
+### Argo CD Application Resources
 
-![Argo CD Synced and Healthy](docs/screenshots/17-argocd-application-synced-healthy.png)
+![Argo CD Application Resource Tree](docs/screenshots/17-argocd-application-resource-tree.png)
 
-### GitOps Reconciliation
+### Argo CD Deployment Validation
 
-![Argo CD Reconciliation](docs/screenshots/21-argocd-replica-reconciliation.png)
+![Argo CD Deployment Validation](docs/screenshots/18-kubectl-argocd-deployment-validation.png)
 
 ## Key Outcomes
 
 * Provisioned repeatable Azure infrastructure using modular Terraform.
 * Implemented passwordless GitHub Actions authentication using OIDC.
 * Automated Docker image build and delivery to ACR.
-* Migrated application deployment from raw YAML to Helm.
+* Migrated application deployment from raw Kubernetes YAML to Helm.
 * Implemented Argo CD as the Kubernetes deployment owner.
 * Separated continuous integration from GitOps delivery.
-* Validated automatic synchronisation and drift reconciliation.
-* Enabled AKS monitoring with Container Insights and Log Analytics.
+* Validated Git-driven deployment and reconciliation.
+* Enabled AKS monitoring using Container Insights and Log Analytics.
 * Added proactive Azure Monitor alerting.
 * Deployed Prometheus and Grafana for Kubernetes-native observability.
 
