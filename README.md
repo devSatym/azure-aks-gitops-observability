@@ -22,6 +22,7 @@ Manual infrastructure provisioning and direct Kubernetes deployments can introdu
 This project implements an Azure AKS platform that provides:
 
 * Repeatable infrastructure using modular Terraform
+* Remote Terraform state management using Azure Storage
 * Passwordless GitHub Actions authentication using OIDC
 * Automated Docker image build and delivery to Azure Container Registry
 * Kubernetes application packaging using Helm
@@ -284,6 +285,7 @@ This separation ensures that GitHub Actions does not directly own the Kubernetes
 ## Key Outcomes
 
 * Provisioned repeatable Azure infrastructure using modular Terraform.
+* Centralised Terraform state in Azure Storage for consistent infrastructure management.
 * Deployed and validated containerised workloads on Azure Kubernetes Service.
 * Implemented passwordless GitHub Actions authentication using OIDC.
 * Automated Docker image build and delivery to Azure Container Registry.
@@ -297,7 +299,6 @@ This separation ensures that GitHub Actions does not directly own the Kubernetes
 
 ## Future Improvements
 
-* Terraform remote backend using Azure Storage
 * Azure Key Vault integration
 * Microsoft Entra Workload Identity
 * Private AKS cluster
