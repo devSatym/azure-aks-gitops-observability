@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ram-webapp
+  name: azure-webapp
   namespace: argocd
 spec:
   project: default
 
   source:
-    repoURL: https://github.com/rambabu-eng/azure-aks-terraform-cicd-monitoring.git
+    repoURL: https://github.com/devSatym/azure-aks-terraform-cicd-monitoring.git
     targetRevision: main
-    path: helm/ram-webapp
+    path: helm/azure-webapp
     helm:
       parameters:
         - name: image.repository
-          value: acraksdemodevjv094d.azurecr.io/ram-aks-web
+          value: acraksdemodevjv094d.azurecr.io/azure-webapp
         - name: image.tag
           value: v1
 
