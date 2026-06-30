@@ -48,20 +48,20 @@ Example workload structure:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ram-webapp
+  name: azure-webapp
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ram-webapp
+      app: azure-webapp
   template:
     metadata:
       labels:
-        app: ram-webapp
+        app: azure-webapp
     spec:
       containers:
-        - name: ram-webapp
-          image: <acr-login-server>/ram-aks-web:<image-tag>
+        - name: azure-webapp
+          image: <acr-login-server>/azure-webapp:<image-tag>
           ports:
             - containerPort: 80
 Kubernetes Service
@@ -71,18 +71,18 @@ A Kubernetes Service exposes the application:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ram-webapp-service
+  name: azure-webapp-service
 spec:
   type: LoadBalancer
   selector:
-    app: ram-webapp
+    app: azure-webapp
   ports:
     - port: 80
       targetPort: 80
 
 The Service selector must match the Pod label:
 
-app: ram-webapp
+app: azure-webapp
 Initial Deployment
 
 Apply the Kubernetes configuration:
@@ -104,7 +104,7 @@ kubectl get svc
 
 Validate the application rollout:
 
-kubectl rollout status deployment/ram-webapp
+kubectl rollout status deployment/azure-webapp
 
 Expected states:
 
@@ -124,7 +124,7 @@ kubectl logs <pod-name>
 
 Inspect the Deployment:
 
-kubectl describe deployment ram-webapp
+kubectl describe deployment azure-webapp
 Evidence
 
 

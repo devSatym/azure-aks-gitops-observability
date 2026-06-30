@@ -86,7 +86,7 @@ IMAGE_TAG=${GITHUB_SHA::7}
 
 Example:
 
-ram-aks-web:a1b2c3d
+azure-webapp:a1b2c3d
 
 Commit-based tags improve traceability between:
 
@@ -106,7 +106,7 @@ List image tags:
 
 az acr repository show-tags \
   --name <acr-name> \
-  --repository ram-aks-web \
+  --repository azure-webapp \
   --output table
 Evidence
 

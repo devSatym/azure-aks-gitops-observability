@@ -20,7 +20,7 @@ Environment-specific values
 Reduced YAML duplication
 Helm Chart Structure
 helm/
-└── ram-webapp/
+└── azure-webapp/
     ├── Chart.yaml
     ├── values.yaml
     └── templates/
@@ -57,8 +57,8 @@ Manual Helm Deployment
 
 Install or upgrade the application:
 
-helm upgrade --install ram-webapp ./helm/ram-webapp \
-  --set image.repository=<acr-login-server>/ram-aks-web \
+helm upgrade --install azure-webapp ./helm/azure-webapp \
+  --set image.repository=<acr-login-server>/azure-webapp \
   --set image.tag=<image-tag>
 Helm Validation
 
@@ -68,35 +68,35 @@ helm list
 
 Check release status:
 
-helm status ram-webapp
+helm status azure-webapp
 
 Check release history:
 
-helm history ram-webapp
+helm history azure-webapp
 
 Render the templates without deploying:
 
-helm template ram-webapp ./helm/ram-webapp
+helm template azure-webapp ./helm/azure-webapp
 
 Validate the chart:
 
-helm lint ./helm/ram-webapp
+helm lint ./helm/azure-webapp
 Upgrade
 
 Deploy a new application image:
 
-helm upgrade ram-webapp ./helm/ram-webapp \
-  --set image.repository=<acr-login-server>/ram-aks-web \
+helm upgrade azure-webapp ./helm/azure-webapp \
+  --set image.repository=<acr-login-server>/azure-webapp \
   --set image.tag=<new-image-tag>
 Rollback
 
 View release history:
 
-helm history ram-webapp
+helm history azure-webapp
 
 Rollback to a previous release:
 
-helm rollback ram-webapp <revision-number>
+helm rollback azure-webapp <revision-number>
 Outcome
 
 This phase converted the application deployment into a reusable and manageable Helm release that could later be controlled through Argo CD.

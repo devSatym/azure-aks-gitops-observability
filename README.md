@@ -1,8 +1,29 @@
-# Azure AKS Container Platform
+# Azure AKS GitOps CI/CD & Observability
 
 A modular Azure Kubernetes Service platform built using Terraform, Docker, Azure Container Registry, GitHub Actions, Helm, Argo CD, Azure Monitor, Prometheus, and Grafana.
 
 This project demonstrates an end-to-end container platform covering infrastructure provisioning, secure CI authentication, container image delivery, Kubernetes application packaging, GitOps deployment, monitoring, alerting, and observability.
+
+## Structure
+
+1. Overview
+2. Architecture
+3. Terraform
+4. GitHub Actions
+5. OIDC Authentication
+6. ACR
+7. GitOps
+8. Helm
+9. Argo CD
+10. Azure Monitor
+11. KQL Alerts
+12. Prometheus/Grafana
+13. Failure Tests
+14. Evidence
+15. Deployment
+16. Teardown
+17. Limitations
+18. Credits
 
 ## Business Problem
 
@@ -167,7 +188,7 @@ Validate the complete platform using Terraform, Azure CLI, kubectl, Helm and Arg
 │       └── deploy-aks.yml
 ├── app/
 ├── helm/
-│   └── ram-webapp/
+│   └── azure-webapp/
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       └── templates/

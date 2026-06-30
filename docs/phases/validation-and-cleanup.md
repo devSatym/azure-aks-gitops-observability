@@ -37,7 +37,7 @@ kubectl get nodes -o wide
 kubectl get deployments
 kubectl get pods
 kubectl get svc
-kubectl rollout status deployment/ram-webapp
+kubectl rollout status deployment/azure-webapp
 
 These commands validate that:
 
@@ -75,11 +75,11 @@ The Deployment controller should automatically create a replacement Pod.
 This validates Kubernetes self-healing at the workload level.
 
 6. Rollout Validation
-kubectl rollout status deployment/ram-webapp
+kubectl rollout status deployment/azure-webapp
 
 View rollout history:
 
-kubectl rollout history deployment/ram-webapp
+kubectl rollout history deployment/azure-webapp
 7. Azure Container Registry Validation
 
 List repositories:
@@ -92,7 +92,7 @@ List application image tags:
 
 az acr repository show-tags \
   --name <acr-name> \
-  --repository ram-aks-web \
+  --repository azure-webapp \
   --output table
 8. Helm Validation
 
@@ -102,19 +102,19 @@ helm list
 
 Check the application release:
 
-helm status ram-webapp
+helm status azure-webapp
 
 View release history:
 
-helm history ram-webapp
+helm history azure-webapp
 
 Validate the chart:
 
-helm lint ./helm/ram-webapp
+helm lint ./helm/azure-webapp
 
 Render the templates locally:
 
-helm template ram-webapp ./helm/ram-webapp
+helm template azure-webapp ./helm/azure-webapp
 9. Argo CD Validation
 
 Check Argo CD Pods:
@@ -127,7 +127,7 @@ kubectl get applications -n argocd
 
 Inspect the application:
 
-kubectl get application ram-webapp -n argocd
+kubectl get application azure-webapp -n argocd
 
 Expected state:
 
@@ -159,11 +159,11 @@ http://localhost:3000
 
 Change the Deployment directly:
 
-kubectl scale deployment ram-webapp --replicas=3
+kubectl scale deployment azure-webapp --replicas=3
 
 Check the Deployment:
 
-kubectl get deployment ram-webapp
+kubectl get deployment azure-webapp
 
 When Argo CD self-healing is enabled, it should return the Deployment to the replica count defined in Git.
 
@@ -171,7 +171,7 @@ When Argo CD self-healing is enabled, it should return the Deployment to the rep
 
 Retrieve the Service external IP:
 
-kubectl get svc ram-webapp-service
+kubectl get svc azure-webapp-service
 
 Open the external IP in a browser.
 
@@ -180,7 +180,7 @@ Remove the Application Helm Release
 
 Only run this when Helm directly owns the release:
 
-helm uninstall ram-webapp
+helm uninstall azure-webapp
 
 When Argo CD owns the release, delete or disable the Argo CD application first.
 

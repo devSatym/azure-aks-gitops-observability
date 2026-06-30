@@ -55,7 +55,7 @@ Argo CD Responsibilities
 Argo CD:
 
 Watches the GitHub repository.
-Reads the Helm chart from helm/ram-webapp.
+Reads the Helm chart from helm/azure-webapp.
 Renders the Helm templates.
 Compares the desired state with AKS.
 Applies required changes.
@@ -92,15 +92,15 @@ kubectl get applications -n argocd
 
 Inspect the application:
 
-kubectl get application ram-webapp -n argocd
+kubectl get application azure-webapp -n argocd
 
 Describe the application:
 
-kubectl describe application ram-webapp -n argocd
+kubectl describe application azure-webapp -n argocd
 
 Validate the application Deployment:
 
-kubectl get deployment ram-webapp
+kubectl get deployment azure-webapp
 
 Validate the application Pods:
 
@@ -109,13 +109,13 @@ Drift Reconciliation Test
 
 A simple reconciliation test can be performed by manually changing the Deployment replica count:
 
-kubectl scale deployment ram-webapp --replicas=3
+kubectl scale deployment azure-webapp --replicas=3
 
 When self-healing is enabled, Argo CD should return the Deployment to the replica count defined in Git.
 
 Validate:
 
-kubectl get deployment ram-webapp
+kubectl get deployment azure-webapp
 Evidence
 
 
