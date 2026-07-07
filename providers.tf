@@ -12,12 +12,7 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "rg-terraform-state"
-    storage_account_name = "sttfstatram2026"
-    container_name       = "tfstate"
-    key                  = "aks-platform/terraform.tfstate"
-  }
+  backend "azurerm" {}
 }
 
 provider "azurerm" {

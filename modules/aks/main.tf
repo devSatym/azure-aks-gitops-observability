@@ -20,8 +20,10 @@ resource "azurerm_kubernetes_cluster" "this" {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
   }
+
   oms_agent {
-    log_analytics_workspace_id = var.log_analytics_workspace_id
+    log_analytics_workspace_id      = var.log_analytics_workspace_id
+    msi_auth_for_monitoring_enabled = true
   }
 
   tags = var.tags

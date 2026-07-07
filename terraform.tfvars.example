@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars and replace only the values appropriate for your Azure subscription.
+# terraform.tfvars is intentionally ignored by Git.
+location     = "centralindia"
+project_name = "aksops"
+environment  = "dev"
+
+node_count   = 2
+node_vm_size = "Standard_D2s_v5"
+
+alert_email = "your-email@example.com"
