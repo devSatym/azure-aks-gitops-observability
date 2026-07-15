@@ -7,15 +7,9 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/devSatym/azure-aks-terraform-cicd-monitoring.git
+    repoURL: https://github.com/devSatym/azure-aks-gitops-observability.git
     targetRevision: main
     path: helm/azure-webapp
-    helm:
-      parameters:
-        - name: image.repository
-          value: acraksdemodevjv094d.azurecr.io/azure-webapp
-        - name: image.tag
-          value: v1
 
   destination:
     server: https://kubernetes.default.svc
