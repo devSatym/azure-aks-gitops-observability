@@ -9,3 +9,7 @@ output "aks_name" {
 output "kubelet_identity_object_id" {
   value = azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id
 }
+
+output "cluster_identity_principal_id" {
+  value = azurerm_kubernetes_cluster.this.identity[0].principal_id
+}
