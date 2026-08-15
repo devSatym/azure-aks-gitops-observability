@@ -75,6 +75,17 @@ module "aks" {
   tags                       = local.tags
 }
 
+module "container_insights" {
+  source = "./modules/container_insights"
+
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  aks_name                   = module.aks.aks_name
+  aks_id                     = module.aks.aks_id
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.tags
+}
+
 resource "azurerm_role_assignment" "aks_acr_pull" {
   scope                            = module.acr.acr_id
   role_definition_name             = "AcrPull"
