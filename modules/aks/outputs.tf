@@ -13,3 +13,7 @@ output "kubelet_identity_object_id" {
 output "cluster_identity_principal_id" {
   value = azurerm_kubernetes_cluster.this.identity[0].principal_id
 }
+
+output "oidc_issuer_url" {
+  value = azurerm_kubernetes_cluster.this.oidc_issuer_url
+}

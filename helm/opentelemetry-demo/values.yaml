@@ -1,0 +1,149 @@
+# Azure-specific overrides for the pinned official OpenTelemetry Demo chart.
+# The demo remains vendor-neutral: services emit OTLP to the Collector and only
+# the Collector knows how to send those signals to Azure Monitor.
+opentelemetry-demo:
+  default:
+    envOverrides:
+      # Native Azure Monitor OTLP ingestion expects delta metrics and its
+      # Application Insights experience supports exponential histograms.
+      - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+        value: delta
+      - name: OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
+        value: base2_exponential_bucket_histogram
+
+  # Keep the application services and Collector, but deliberately avoid the
+  # demo's observability backends. Azure is the observability backend here.
+  jaeger:
+    enabled: false
+  prometheus:
+    enabled: false
+  grafana:
+    enabled: false
+  opensearch:
+    enabled: false
+
+  components:
+    frontend-proxy:
+      service:
+        # This is the only public service for the primary workload.
+        type: LoadBalancer
+
+    load-generator:
+      enabled: true
+      envOverrides:
+        # Keep generated demo traffic useful without needlessly increasing cost.
+        - name: LOAD_GENERATOR_VUS
+          value: "3"
+
+    # These optional AI/profiling-oriented demo features are outside this
+    # project's observability story and consume significant capacity.
+    agent:
+      enabled: false
+    chatbot:
+      enabled: false
+    mcp:
+      enabled: false
+    opamp-server:
+      enabled: false
+
+  opentelemetry-collector:
+    enabled: true
+    image:
+      repository: otel/opentelemetry-collector-contrib
+    fullnameOverride: otel-collector
+    mode: deployment
+    replicaCount: 1
+    service:
+      enabled: true
+    serviceAccount:
+      # Terraform owns the annotated workload-identity ServiceAccount.
+      create: false
+      name: otel-collector
+    podLabels:
+      azure.workload.identity/use: "true"
+    extraEnvsFrom:
+      - configMapRef:
+          name: otel-azure-otlp-config
+    presets:
+      hostMetrics:
+        enabled: false
+      kubeletMetrics:
+        enabled: false
+      clusterMetrics:
+        enabled: false
+      annotationDiscovery:
+        metrics:
+          enabled: false
+      kubernetesAttributes:
+        enabled: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # alternateConfig replaces the upstream demo backend exporters. The
+    # endpoints are non-secret DCR ingestion URLs supplied by Terraform.
+    alternateConfig:
+      extensions:
+        health_check:
+          endpoint: "${env:MY_POD_IP}:13133"
+        azure_auth:
+          workload_identity:
+            client_id: "${env:AZURE_CLIENT_ID}"
+            tenant_id: "${env:AZURE_TENANT_ID}"
+            federated_token_file: "${env:AZURE_FEDERATED_TOKEN_FILE}"
+          scopes:
+            - https://monitor.azure.com/.default
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "${env:MY_POD_IP}:4317"
+            http:
+              endpoint: "${env:MY_POD_IP}:4318"
+      processors:
+        memory_limiter:
+          check_interval: 5s
+          limit_percentage: 80
+          spike_limit_percentage: 25
+        cumulativetodelta: {}
+        batch: {}
+      exporters:
+        otlp_http/azuremonitor:
+          traces_endpoint: "${env:AZURE_MONITOR_TRACES_ENDPOINT}"
+          logs_endpoint: "${env:AZURE_MONITOR_LOGS_ENDPOINT}"
+          metrics_endpoint: "${env:AZURE_MONITOR_METRICS_ENDPOINT}"
+          auth:
+            authenticator: azure_auth
+      service:
+        extensions:
+          - health_check
+          - azure_auth
+        pipelines:
+          traces:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - batch
+            exporters:
+              - otlp_http/azuremonitor
+          metrics:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - cumulativetodelta
+              - batch
+            exporters:
+              - otlp_http/azuremonitor
+          logs:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - batch
+            exporters:
+              - otlp_http/azuremonitor

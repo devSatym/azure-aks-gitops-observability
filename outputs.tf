@@ -17,3 +17,15 @@ output "get_credentials_command" {
 output "acr_login_server" {
   value = module.acr.login_server
 }
+
+output "application_insights_name" {
+  value = module.application_insights.name
+}
+
+output "azure_monitor_workspace_name" {
+  value = module.managed_prometheus.workspace_name
+}
+
+output "managed_grafana_endpoint" {
+  value = module.managed_grafana.endpoint
+}

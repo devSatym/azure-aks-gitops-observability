@@ -24,6 +24,12 @@ resource "azurerm_kubernetes_cluster" "this" {
     type = "SystemAssigned"
   }
 
+  # The OTel collector uses an AKS workload identity rather than a static
+  # Application Insights connection string. The OIDC issuer is already part of
+  # the v1 cluster, but declaring both settings makes this reproducible.
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
+
   network_profile {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
@@ -33,6 +39,10 @@ resource "azurerm_kubernetes_cluster" "this" {
     log_analytics_workspace_id      = var.log_analytics_workspace_id
     msi_auth_for_monitoring_enabled = true
   }
+
+  # Presence of this AzureRM block enables the AKS Azure Monitor metrics
+  # add-on. Its destination is defined by the separate managed Prometheus DCR.
+  monitor_metrics {}
 
   tags = var.tags
 }
