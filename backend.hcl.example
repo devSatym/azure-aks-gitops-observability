@@ -1,0 +1,12 @@
+# Copy to backend.hcl, replace the placeholders with infrastructure you own,
+# then run: terraform init -reconfigure -backend-config=backend.hcl
+# backend.hcl is intentionally ignored by Git.
+# This uses your authenticated Azure CLI / Microsoft Entra ID session, not a
+# storage account access key. Assign Storage Blob Data Contributor to the
+# Terraform operator on the state container before initialization.
+resource_group_name  = "YOUR_TFSTATE_RESOURCE_GROUP"
+storage_account_name = "YOUR_TFSTATE_STORAGE_ACCOUNT"
+container_name       = "tfstate"
+key                  = "azure-aks-gitops/terraform.tfstate"
+use_azuread_auth     = true
+use_cli              = true
