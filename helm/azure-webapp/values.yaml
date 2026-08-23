@@ -1,8 +1,10 @@
 replicaCount: 2
 
 image:
-  repository: ""
-  tag: "latest"
+  # Replace this bootstrap repository once Terraform has created the project ACR.
+  # GitHub Actions subsequently changes only image.tag.
+  repository: "YOUR_ACR_LOGIN_SERVER.azurecr.io/azure-webapp"
+  tag: "bootstrap"
   pullPolicy: IfNotPresent
 
 service:
