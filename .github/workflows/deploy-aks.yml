@@ -1,4 +1,4 @@
-name: Build and Deploy to AKS using Helm
+name: Build, Push and Update GitOps
 
 on:
   push:
@@ -7,22 +7,22 @@ on:
     paths:
       - "app/**"
       - ".github/workflows/deploy-aks.yml"
-     
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+
+concurrency:
+  group: gitops-image-promotion-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   ACR_NAME: ${{ vars.ACR_NAME }}
   ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
-  AKS_RESOURCE_GROUP: ${{ vars.AKS_RESOURCE_GROUP }}
-  AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
-  DEPLOYMENT_NAME: ${{ vars.DEPLOYMENT_NAME }}
 
 jobs:
-  build-and-deploy:
+  build-push-update-gitops:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,40 +36,67 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Debug variables
+      - name: Validate repository variables
         run: |
-          echo "ACR_NAME=[$ACR_NAME]"
-          echo "ACR_LOGIN_SERVER=[$ACR_LOGIN_SERVER]"
-          echo "AKS_RESOURCE_GROUP=[$AKS_RESOURCE_GROUP]"
-          echo "AKS_CLUSTER_NAME=[$AKS_CLUSTER_NAME]"
-          echo "IMAGE_NAME=[$IMAGE_NAME]"
-          echo "DEPLOYMENT_NAME=[$DEPLOYMENT_NAME]"
+          for variable in ACR_NAME ACR_LOGIN_SERVER IMAGE_NAME; do
+            if [ -z "${!variable}" ]; then
+              echo "Missing required repository variable: ${variable}" >&2
+              exit 1
+            fi
+          done
 
-      - name: Clean variable spaces
-        run: |
-          echo "ACR_NAME=$(echo "$ACR_NAME" | xargs)" >> $GITHUB_ENV
-          echo "ACR_LOGIN_SERVER=$(echo "$ACR_LOGIN_SERVER" | xargs)" >> $GITHUB_ENV
-          echo "AKS_RESOURCE_GROUP=$(echo "$AKS_RESOURCE_GROUP" | xargs)" >> $GITHUB_ENV
-          echo "AKS_CLUSTER_NAME=$(echo "$AKS_CLUSTER_NAME" | xargs)" >> $GITHUB_ENV
-          echo "IMAGE_NAME=$(echo "$IMAGE_NAME" | xargs)" >> $GITHUB_ENV
-          echo "DEPLOYMENT_NAME=$(echo "$DEPLOYMENT_NAME" | xargs)" >> $GITHUB_ENV
+      - name: Calculate immutable image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build Docker image
-        run: |
-          IMAGE_TAG=${GITHUB_SHA::7}
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ./app
+        run: docker build -t "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" ./app
 
       - name: Push Docker image to ACR
         run: |
-          az acr login --name $ACR_NAME
-          docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+          az acr login --name "$ACR_NAME"
+          docker push "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 
-      - name: Get AKS credentials
+      - name: Update Helm desired state
+        env:
+          VALUES_FILE: helm/azure-webapp/values.yaml
         run: |
-          az aks get-credentials \
-            --resource-group $AKS_RESOURCE_GROUP \
-            --name $AKS_CLUSTER_NAME \
-            --overwrite-existing
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
 
-      
+          values_file = Path(os.environ["VALUES_FILE"])
+          lines = values_file.read_text().splitlines(keepends=True)
+          image_start = next((i for i, line in enumerate(lines) if line == "image:\n"), None)
+          if image_start is None:
+              raise SystemExit("Could not find the top-level image block")
+
+          tag_indexes = []
+          for index in range(image_start + 1, len(lines)):
+              line = lines[index]
+              if line and not line[0].isspace() and line.strip():
+                  break
+              if re.match(r"^  tag:\s*", line):
+                  tag_indexes.append(index)
+
+          if len(tag_indexes) != 1:
+              raise SystemExit(f"Expected one image.tag entry, found {len(tag_indexes)}")
+
+          lines[tag_indexes[0]] = f'  tag: "{os.environ["IMAGE_TAG"]}"\n'
+          values_file.write_text("".join(lines))
+          PY
+          git diff -- "$VALUES_FILE"
+
+      - name: Commit GitOps image tag
+        env:
+          VALUES_FILE: helm/azure-webapp/values.yaml
+        run: |
+          if git diff --quiet -- "$VALUES_FILE"; then
+            echo "Desired image tag is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES_FILE"
+          git commit -m "chore(gitops): deploy ${IMAGE_TAG} [skip ci]"
+          git push
