@@ -82,6 +82,13 @@ az login
 az account show
 ```
 
+## Local Commits
+
+- `26aa55e` — `infra: make terraform backend and monitoring auth configurable`
+- `72f0869` — `refactor: make helm values the deployment source of truth`
+- `da509a2` — `ci: implement ACR to GitOps image promotion`
+- `672fb67` — `docs: add repository audit and implementation plan`
+
 ## Last Updated
 
-2026-08-23, Asia/Kolkata — local implementation and validation completed; awaiting Azure CLI login.
+2026-08-23, Asia/Kolkata — local implementation and validation committed; awaiting Azure CLI login.

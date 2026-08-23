@@ -19,7 +19,7 @@ Repository audit, planning, local implementation cleanup, and local validation c
 
 ## What was last done?
 
-Removed stale backend/Argo/CI/raw-manifest coupling; added configuration examples and provider lock; enabled managed-identity monitoring; and created the required tracking documents. The only pre-existing uncommitted file is `plan.md`, which remains untouched.
+Removed stale backend/Argo/CI/raw-manifest coupling; added configuration examples and provider lock; enabled managed-identity monitoring; and created the required tracking documents. The completed work is in commits `26aa55e`, `72f0869`, `da509a2`, and `672fb67`. The only remaining uncommitted file is the pre-existing `plan.md`, which remains untouched.
 
 ## What command should be run next?
 
