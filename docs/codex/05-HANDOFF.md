@@ -2,7 +2,7 @@
 
 ## Where are we?
 
-The project has a provisioned Azure environment and is ready to install Argo CD, then prove its first CI-to-GitOps delivery. Terraform applied the reviewed plan as 13 adds with no changes or destruction. The application remains intentionally undeployed until CI publishes a real immutable image tag.
+The project has a live, evidence-backed first delivery and is waiting only on Azure-native telemetry ingestion before controlled alert validation. Terraform applied the reviewed plan as 13 adds with no changes or destruction; CI used OIDC to publish a SHA image and update Git; Argo deployed it and proved self-heal; Prometheus/Grafana baseline checks pass.
 
 ## What works locally?
 
@@ -15,32 +15,35 @@ The project has a provisioned Azure environment and is ready to install Argo CD,
 - Alert rules now use current `KubePodInventory` CrashLoop fields and a time-window restart delta.
 - The project ACR is Basic with admin access disabled; the two-node Azure CNI AKS cluster is Ready and Container Insights agents are running.
 - A dedicated Entra application/service principal has a GitHub main-branch federation and ACR-scoped `AcrPush`; the expected GitHub secret and variable names are configured without a client secret.
+- Argo CD 3.5.1 is deployed from Helm chart 10.4.0. The `azure-webapp` Application is `Synced`/`Healthy` at bot revision `751d2c4`, deploying `azure-webapp:9d37a77` with two Ready pods and a working LoadBalancer response.
+- A deliberate live scale to four replicas became `OutOfSync`; Argo restored the Git-defined two replicas in 28 seconds without a Git change.
+- `kube-prometheus-stack` 88.5.4 is deployed in `monitoring`: Prometheus is healthy with 18/18 active targets, and Grafana is healthy with its supplied Kubernetes dashboards.
 
 ## What remains unverified?
 
-- A real GitHub OIDC login, image push/tag, GitOps promotion commit, Argo installation/application health, workload response, self-heal, telemetry/KQL data, alert delivery, Prometheus, Grafana, and screenshots.
+- Container Insights ingestion and real KQL result records; a controlled failed-pod alert and recipient notification confirmation; fresh owner-captured screenshots.
 - README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
 
 ## Important external facts
 
 - The active Azure subscription was inspected without a subscription switch. It has the dedicated state backend plus `rg-aksops-dev-n8bo7j`, `aks-aksops-dev-n8bo7j`, `acraksopsdevn8bo7j`, `law-aksops-dev-n8bo7j`, VNet/subnet, Action Group, and three scheduled-query rules; `devops-rg` remains empty and untouched.
 - Required Azure resource providers now report `Registered`.
-- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Source is pushed through `82b814e`; its expected Actions secret/variable names are configured. OIDC uses the repository's live immutable subject prefix, not the legacy name-only subject.
+- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. First delivery source `9d37a77` promoted to bot commit `751d2c4`; OIDC uses the repository's live immutable subject prefix, not the legacy name-only subject.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
 
-The reviewed Terraform plan applied successfully (13 added, 0 changed, 0 destroyed). ACR and AKS baseline checks passed through the dedicated kubeconfig. Helm's image repository was changed to the created ACR while retaining `bootstrap`. A dedicated Entra CI identity, exact GitHub OIDC federation, ACR-scoped `AcrPush`, and the GitHub configuration names were then created.
+Argo CD was installed through the dedicated kubeconfig and validated before the Application existed. The first app commit completed OIDC login, ACR push, and a one-field GitOps update. After its real SHA tag existed, Argo synchronized a two-pod Deployment and LoadBalancer response. The reversible self-heal test and Prometheus/Grafana API checks then passed. Initial Log Analytics queries are empty while new-workspace telemetry ingests; no alert test has run.
 
 ## What command/action comes next?
 
-1. Install Argo CD with Helm into `argocd` using only the dedicated kubeconfig and wait for core pods.
-2. Commit a harmless app change to trigger CI, verify the immutable image/tag and bot's one-field GitOps commit, then apply the Argo Application.
+1. Re-run direct `KubePodInventory` and `KubeNodeInventory` queries after ingestion.
+2. Only after a current record appears, create/delete one disposable failed pod, verify the scheduled query fires, and request recipient confirmation without recording the email.
 
 ## What human input is needed?
 
 - Confirm the notification when the controlled alert test occurs.
-- Capture fresh screenshots later; inherited screenshots cannot be used as proof.
+- Capture the fresh checklist items in `docs/screenshots/README.md`; inherited images cannot be used as proof.
 
 ## Safe credential and cluster commands
 

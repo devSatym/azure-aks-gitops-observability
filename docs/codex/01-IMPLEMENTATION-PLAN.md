@@ -26,7 +26,7 @@ flowchart TD
 
 ## Current Gate
 
-Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources now exist. Both AKS nodes are Ready through a dedicated project kubeconfig; ACR has admin access disabled; Container Insights agents are running. Helm values point at the real ACR but retain the intentionally nonexistent `bootstrap` tag. The next gate is to install Argo CD, prove the configured GitHub OIDC flow with a first immutable image, then apply the Application.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry is the remaining live gate: `ama-logs` pods run, but the new workspace has not yet returned `KubePodInventory`/`KubeNodeInventory` data.
 
 ## Phase 0 — Complete Repository Audit
 
@@ -187,12 +187,12 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 12 — Install Argo CD
 
 - **Objective:** install Argo CD using Helm in namespace `argocd`.
-- **Current state:** not started; only the Application manifest is stored.
-- **Required changes:** Helm release and live-tracking documentation only; do not Terraform-manage Argo.
+- **Current state:** complete. Helm chart `argo-cd` 10.4.0 / Argo CD 3.5.1 is deployed in `argocd`; its core pods and Application CRD are healthy.
+- **Required changes:** none before routine operational validation; do not Terraform-manage Argo.
 - **Files affected:** cluster state and tracking docs.
 - **Commands/actions:** follow current official Argo Helm instructions and wait for core pods. Do not apply the Application until Phase 13 produces a real ACR SHA tag in Git; the bootstrap image does not exist.
 - **Expected result:** Argo core components are healthy and ready to reconcile the Application.
-- **Validation:** `kubectl get pods -n argocd`.
+- **Validation:** release status is `deployed`; application-controller, repo-server, server, Redis, Dex, notification, and ApplicationSet components are Running.
 - **Rollback/recovery:** Helm uninstall only in the approved cleanup sequence.
 - **Dependencies:** Phases 5, 7, 8, and a pushed public fork.
 - **Human action required?:** no.
@@ -200,12 +200,12 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 13 — First End-to-End Delivery Test
 
 - **Objective:** prove one harmless app change reaches AKS through CI → Git → Argo.
-- **Current state:** not started.
-- **Required changes:** a harmless visible app edit and resulting GitOps promotion commit.
+- **Current state:** complete. Source commit `9d37a77` added a visible delivery marker; its successful GitHub Actions run built/pushed `azure-webapp:9d37a77` and bot commit `751d2c4` changed only Helm `image.tag`.
+- **Required changes:** retain the proven promotion sequence for future application changes.
 - **Files affected:** `app/index.html`, Helm `image.tag`, evidence/status docs.
 - **Commands/actions:** push an app change to create the first image/promotion commit; verify the SHA tag exists; only then apply `argocd/azure-webapp-application.yaml`. Collect source SHA, image tag/digest, GitOps SHA, Argo revision, ReplicaSet/deployment revision, and response.
 - **Expected result:** an immutable image is built/pushed, desired state commits, then Argo deploys a known-existing image and new pods serve the change.
-- **Validation:** GitHub run, `az acr repository show-tags`, kubectl rollout, Argo health, HTTP response.
+- **Validation:** OIDC job succeeded; ACR tag/digest exists; Argo is `Synced`/`Healthy` at `751d2c4`; Deployment revision 1 has two Ready pods; the LoadBalancer served the marker.
 - **Rollback/recovery:** use Git to promote a known-good tag.
 - **Dependencies:** Phases 6, 9, 12.
 - **Human action required?:** no.
@@ -213,12 +213,12 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 14 — GitOps Drift Test
 
 - **Objective:** prove Argo self-heal restores desired replicas.
-- **Current state:** not started.
+- **Current state:** complete. The Deployment was scaled from two to four replicas at `2026-08-24T08:29:32+05:30`; Argo reported `OutOfSync`/`Progressing` and restored two Ready replicas by `2026-08-24T08:30:00+05:30` without a Git change.
 - **Required changes:** no Git configuration change; temporary live scale only.
 - **Files affected:** cluster state during test and validation docs.
 - **Commands/actions:** record desired count, `kubectl scale deployment azure-webapp --replicas=4`, observe restoration without editing Git.
 - **Expected result:** Application becomes out of sync briefly and returns to desired replicas.
-- **Validation:** timestamped deployment watch and Argo status.
+- **Validation:** timestamped deployment and Application status show the temporary drift and restoration in 28 seconds.
 - **Rollback/recovery:** Argo self-heal; manually restore only if reconciliation demonstrably fails.
 - **Dependencies:** Phase 12.
 - **Human action required?:** no.
@@ -226,8 +226,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 15 — Azure Container Insights
 
 - **Objective:** confirm AKS telemetry reaches its Log Analytics workspace.
-- **Current state:** Terraform declares it; no cluster exists.
-- **Required changes:** none unless actual apply/ingestion reveals a documented compatibility problem.
+- **Current state:** AKS is provisioned and `ama-logs` DaemonSet/ReplicaSet pods are Running. Initial direct queries over the new workspace returned zero `KubePodInventory` and `KubeNodeInventory` records.
+- **Required changes:** wait for normal ingestion and rerun the exact timestamped queries before diagnosing configuration or altering the design.
 - **Files affected:** validation/status docs.
 - **Commands/actions:** inspect AKS monitoring profile, wait for ingestion, inspect node/controller/container/pod data.
 - **Expected result:** current cluster inventory is available in Log Analytics.
@@ -239,8 +239,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 16 — Log Analytics / KQL
 
 - **Objective:** run schema-appropriate queries over the actual telemetry.
-- **Current state:** current docs confirm `KubeNodeInventory.Status`, `KubePodInventory.ContainerStatusReason`, and `ContainerRestartCount`; data is unverified.
-- **Required changes:** none before data exists.
+- **Current state:** configuration and query syntax are inspected; actual result sets remain empty during initial ingestion.
+- **Required changes:** rerun pod/node queries after ingestion, then verify current columns/results before marking this phase complete.
 - **Files affected:** validation/docs only.
 - **Commands/actions:** query recent pods/nodes and review actual schema before calling any test successful.
 - **Expected result:** meaningful workload/cluster queries return records.
@@ -252,8 +252,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 17 — Azure Monitor Alert Rules
 
 - **Objective:** verify the three Terraform-created rules and their Action Group.
-- **Current state:** improved KQL is pending Phase 3; no Azure resources exist.
-- **Required changes:** none beyond Terraform correction/apply.
+- **Current state:** configuration complete. One enabled Action Group with one receiver and three enabled scheduled-query rules exist; each has a 5-minute frequency and 15-minute window, with the inspected KQL/threshold/action-group association from Terraform.
+- **Required changes:** no Terraform change; verify runtime evaluation after telemetry arrives.
 - **Files affected:** `modules/alerts/main.tf`, tracking/docs.
 - **Commands/actions:** inspect alert names, queries, frequencies, windows, thresholds, action group, and enabled state.
 - **Expected result:** Node Not Ready, failed/CrashLoop, and recent-restart alerts are live.
@@ -278,12 +278,12 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 19 — Prometheus and Grafana
 
 - **Objective:** validate Kubernetes infrastructure metrics alongside Azure-native observability.
-- **Current state:** not started; no stack is declared in Terraform.
-- **Required changes:** Helm-install `kube-prometheus-stack` in `monitoring`; no Ingress/TLS/custom dashboards.
+- **Current state:** complete baseline. Helm chart `kube-prometheus-stack` 88.5.4 is deployed in `monitoring`; operator, Prometheus, Grafana, Alertmanager, kube-state-metrics, and two node exporters are Running.
+- **Required changes:** none; no Ingress, TLS, or custom dashboard was added.
 - **Files affected:** cluster Helm release and tracking docs.
 - **Commands/actions:** add/update chart repository, install, wait for pods, port-forward Grafana, generate modest application traffic, review supplied Kubernetes dashboards.
 - **Expected result:** Prometheus targets/metrics and populated Grafana cluster/node/namespace/pod views.
-- **Validation:** healthy pods/release, targets, dashboard observations.
+- **Validation:** Prometheus is healthy with 18/18 active targets; it reports two available `azure-webapp` replicas; Grafana reports database health and 29 dashboards including the supplied Kubernetes cluster/node/namespace/workload views.
 - **Rollback/recovery:** Helm uninstall only in documented cleanup.
 - **Dependencies:** Phase 5.
 - **Human action required?:** no.
@@ -291,8 +291,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 20 — Screenshot/Evidence Plan
 
 - **Objective:** specify fresh evidence without presenting inherited images as this environment's proof.
-- **Current state:** not started; inherited assets are unverified.
-- **Required changes:** create `docs/screenshots/README.md` with the 13 requested capture items and redaction guidance.
+- **Current state:** the fresh-capture/redaction checklist now exists at `docs/screenshots/README.md`; inherited assets remain unverified.
+- **Required changes:** owner captures fresh evidence only after the named live gates pass.
 - **Files affected:** screenshot checklist and validation docs.
 - **Commands/actions:** create checklist after live tests; owner captures actual portal/terminal/UI screens.
 - **Expected result:** screenshots correspond to observed validation.

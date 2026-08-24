@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phases 5–7 complete; Phase 12 (Argo CD installation) and Phase 13 (first CI-to-GitOps delivery) in progress.
+Phases 5–14 and the Prometheus/Grafana baseline are complete; Azure-native telemetry ingestion is in progress.
 
 ## Current Status
 
-Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, and the reviewed Terraform apply are complete. AKS, ACR, Log Analytics, Action Group, and all three alert rules exist. Both AKS nodes are Ready through the isolated kubeconfig. CI has passwordless ACR-scoped configuration but has not yet run; Argo CD is not yet installed and the application remains intentionally undeployed until CI creates its first SHA image.
+Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, Terraform apply, passwordless CI, Argo CD, the first CI-to-GitOps delivery, and a self-heal drift test are complete. The live application is `Synced`/`Healthy` with two Ready pods and a working LoadBalancer response. Prometheus/Grafana baseline checks pass. Container Insights agents run, but initial Log Analytics pod/node queries remain empty while the new workspace ingests data.
 
 ## Completed
 
@@ -29,18 +29,24 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Verified the Basic ACR is provisioned with admin access disabled and legacy registry permissions, so its scoped `AcrPush` role is applicable.
 - Updated Helm's sole image repository to the real ACR and re-ran Helm lint/template; `image.tag` remains the intentional `bootstrap` placeholder.
 - Created a dedicated Entra CI application/service principal, configured a main-branch GitHub OIDC federation from GitHub's live immutable subject prefix, granted `AcrPush` at the ACR only, and configured the required GitHub secret/variable names. No client secret or ACR admin credential was created.
+- Installed Helm chart `argo-cd` 10.4.0 / Argo CD 3.5.1 into `argocd`; all core components and the Application CRD are healthy.
+- Proved the first CI → Git → Argo delivery: GitHub OIDC login, Docker build, ACR push of `azure-webapp:9d37a77`, and the bot's one-field `image.tag` update all succeeded. Argo synchronized commit `751d2c4`; its two pods serve the visible delivery marker through the LoadBalancer.
+- Proved Argo self-heal: the temporary four-replica drift became OutOfSync and returned to Git's two replicas in 28 seconds with no Git edit.
+- Installed `kube-prometheus-stack` 88.5.4 in `monitoring`. Prometheus has 18/18 active targets and the application replica metric; Grafana is healthy with 29 supplied dashboards.
+- Inspected the Action Group and all three enabled scheduled-query rules without exposing the recipient. Each rule has a five-minute frequency and 15-minute window.
+- Added `docs/screenshots/README.md` to distinguish inherited images from the 13 required fresh captures.
 
 ## In Progress
 
-- Install Argo CD with Helm into `argocd`, then trigger and inspect the first CI image promotion before applying the Application.
+- Re-query Log Analytics for pod/node records, then run the controlled failed-pod alert test only after KQL confirms a matchable record.
 
 ## Blocked
 
-- No current prerequisite is blocked. Later telemetry, alert-delivery, Grafana, and screenshot tests wait on their natural ingestion or human-confirmation gates.
+- No infrastructure prerequisite is blocked. Container Insights ingestion is the current asynchronous gate; alert-delivery and screenshot capture require later data/owner confirmation.
 
 ## Next Action
 
-Install Argo CD, wait for its core pods, then push one harmless `app/` change. CI must first produce and commit a real immutable SHA tag; only then apply the Argo Application. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, and the Basic ACR. No destructive action is planned.
+Re-query the actual workspace after ingestion. When a recent `KubePodInventory` record is visible, create one disposable `restartPolicy: Never` failed pod, observe the KQL match and fired alert, delete the pod, and ask the recipient to confirm notification delivery. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -53,12 +59,15 @@ Install Argo CD, wait for its core pods, then push one harmless `app/` change. C
 - ACR: `acraksopsdevn8bo7j` (Basic; admin disabled; legacy registry permissions).
 - Log Analytics: `law-aksops-dev-n8bo7j` (30-day retention), Action Group, and three AKS scheduled-query rules.
 - Project VNet/subnet plus ACR Pull and subnet Network Contributor role assignments.
+- Argo CD Helm release in `argocd` (chart 10.4.0 / app 3.5.1).
+- `azure-webapp` Argo Application and its two-replica LoadBalancer Deployment in `default`.
+- `kube-prometheus-stack` Helm release in `monitoring` (chart 88.5.4).
 - The pre-existing empty `devops-rg` remains untouched.
 
 ## GitHub Configuration
 
 - Repository: `devSatym/azure-aks-gitops-observability` (public, default branch `main`, no branch protection).
-- GitHub CLI is authenticated as repository administrator; corrected source is pushed through `82b814e`.
+- GitHub CLI is authenticated as repository administrator; the first source delivery is `9d37a77` and its bot GitOps commit is `751d2c4`.
 - Configured Actions secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (values are not recorded).
 - Configured Actions variables: `ACR_NAME`, `ACR_LOGIN_SERVER`, `IMAGE_NAME=azure-webapp`.
 - No client secret is required or intended.
@@ -79,13 +88,19 @@ Install Argo CD, wait for its core pods, then push one harmless `app/` change. C
 | Terraform apply | PASS; 13 added, 0 changed, 0 destroyed |
 | ACR baseline | PASS; Basic SKU, provisioned, admin disabled |
 | AKS baseline / isolated kubeconfig | PASS; two Ready nodes and system/Container Insights pods running through dedicated project kubeconfig |
-| GitHub OIDC configuration | PASS (configuration); dedicated federation and ACR-scoped `AcrPush` configured, real login pending |
+| GitHub OIDC configuration and real login | PASS; dedicated federation/ACR-scoped `AcrPush` configured and first workflow OIDC login succeeded |
 | GitHub repository / configuration inventory | PASS; administrator access and required secret/variable names confirmed without reading secret values |
-| Argo / first CI promotion / workload / Grafana | NOT RUN; staged in the documented safe order |
+| First CI-to-GitOps promotion | PASS; source SHA image exists, bot changed only `image.tag`, and no CI AKS/Helm/Argo deployment occurred |
+| Argo CD / application | PASS; chart 10.4.0 / app 3.5.1 core healthy; Application Synced/Healthy at `751d2c4` |
+| Workload response | PASS; rollout has two Ready pods and the LoadBalancer response contains the delivery marker |
+| Drift correction | PASS; Argo restored replicas 4 → 2 in 28 seconds without a Git change |
+| Azure Monitor rules | PASS (configuration); Action Group and three enabled five-minute/15-minute KQL rules inspected |
+| Prometheus / Grafana | PASS (baseline); Prometheus 18/18 active targets and workload replica metric; Grafana healthy with 29 dashboards |
+| Container Insights / KQL / fired alert | PENDING; `ama-logs` pods running but initial new-workspace queries have zero records |
 
 ## Known Issues
 
-- `helm/azure-webapp/values.yaml` deliberately retains the non-deployable `bootstrap` tag, although its repository now points at the real ACR. Do not apply the Argo Application until a real SHA tag is present in Git.
+- The deployed Helm value is the immutable `9d37a77` tag; CI remains the only allowed writer of `image.tag`.
 - The current default kubeconfig points to a GKE production-named context and is unreachable. It must not be used for this project; use a dedicated, ignored project kubeconfig after AKS exists.
 - README, phase guides, architecture PNG, and screenshots are inherited/stale and must not be treated as evidence. They are deferred until validation is observed.
 - Role-assignment propagation may delay AKS networking/ACR access after apply; wait/verify rather than adding broad permissions.
@@ -109,8 +124,8 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Local Commits
 
-- Source migration/current corrections are pushed through `82b814e`; the untracked user brief `plan.md` remains excluded.
+- The application source and bot GitOps commits are pushed through `751d2c4`; the untracked user brief `plan.md` remains excluded.
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — Terraform applied (13 added); AKS/ACR/OIDC baseline verified; installing Argo and proving the first CI promotion next.
+2026-08-24, Asia/Kolkata — first CI-to-GitOps delivery, self-heal, and Prometheus/Grafana baseline pass; awaiting Container Insights ingestion before controlled alert validation.
