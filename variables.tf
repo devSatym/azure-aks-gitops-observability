@@ -67,6 +67,28 @@ variable "enable_managed_grafana" {
   default     = false
 }
 
+variable "log_analytics_daily_quota_gb" {
+  description = "Daily Log Analytics ingestion cap in GB. Keep -1 for the existing unlimited default; use a finite cap for short-lived capture environments."
+  type        = number
+  default     = -1
+
+  validation {
+    condition     = var.log_analytics_daily_quota_gb == -1 || var.log_analytics_daily_quota_gb > 0
+    error_message = "log_analytics_daily_quota_gb must be -1 or a positive number."
+  }
+}
+
+variable "application_insights_daily_data_cap_in_gb" {
+  description = "Daily Application Insights cap in GB. The default preserves the existing deployment; temporary capture profiles should set a small finite cap."
+  type        = number
+  default     = 100
+
+  validation {
+    condition     = var.application_insights_daily_data_cap_in_gb > 0
+    error_message = "application_insights_daily_data_cap_in_gb must be positive."
+  }
+}
+
 variable "kubeconfig_path" {
   description = "Path to the dedicated kubeconfig used only for Terraform's OTel handoff objects."
   type        = string

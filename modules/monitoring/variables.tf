@@ -10,6 +10,10 @@ variable "resource_group_name" {
   type = string
 }
 
+variable "daily_quota_gb" {
+  type = number
+}
+
 variable "tags" {
   type = map(string)
 }
