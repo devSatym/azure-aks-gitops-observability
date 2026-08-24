@@ -23,10 +23,10 @@
 
 ## ADR-004 — Local AzureRM backend configuration
 
-**Status:** accepted.
+**Status:** accepted and implemented.
 **Context:** committed backend details target someone else's state resource group and storage account.
 **Decision:** commit an empty AzureRM backend and `backend.hcl.example`; ignore the owner-specific `backend.hcl`. The example uses Microsoft Entra ID / Azure CLI authentication (`use_azuread_auth` and `use_cli`) rather than a storage access key.
-**Consequences:** every user supplies their own storage coordinates with `terraform init -backend-config=backend.hcl` and needs `Storage Blob Data Contributor` on the state container; no storage key or backend name enters Git.
+**Consequences:** the active environment uses its ignored `backend.hcl` with the dedicated `rg-aksops-dev-tfstate` / `staksopsdevtf20260824` / `tfstate` backend. The Terraform operator has `Storage Blob Data Contributor`; shared-key access is disabled. No storage key or backend name enters Git.
 
 ## ADR-005 — Passwordless GitHub OIDC with ACR-scoped RBAC
 

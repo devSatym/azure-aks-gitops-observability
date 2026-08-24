@@ -42,7 +42,7 @@ The application is a deliberately simple nginx page. The Helm chart renders one 
 | --- | --- | --- |
 | Terraform | Required version `>= 1.6.0`; local CLI 1.15.8 | `fmt`, backend-disabled init, and `validate` pass. |
 | Providers | AzureRM `~> 4.0`, Random `~> 3.6`; lock pins 4.81.0 / 3.9.0 | Lock file is tracked. |
-| Backend | `backend "azurerm" {}` only | Environment-specific backend is correctly delegated to ignored `backend.hcl`. No remote backend exists yet. |
+| Backend | `backend "azurerm" {}` only | Environment-specific backend is correctly delegated to ignored `backend.hcl`. The owner-controlled remote backend is now initialized with Entra/Azure CLI authentication. |
 | Input examples | `backend.hcl.example` and `terraform.tfvars.example` exist | Both contain placeholders/examples only. A real ignored `terraform.tfvars` still needs an alert recipient. |
 | AKS/ACR identity | `AcrPull` uses the kubelet object ID and ACR scope | Correct least-privilege pull relationship; apply-time validation remains pending. |
 | Monitoring auth | `oms_agent.msi_auth_for_monitoring_enabled = true` | `terraform validate` succeeds with the pinned provider, and current AzureRM docs list this optional setting. |
@@ -80,13 +80,15 @@ The application is a deliberately simple nginx page. The Helm chart renders one 
 ## External Environment Audit (Read-only)
 
 - Azure CLI 2.89.1 is installed and authenticated to one enabled/default subscription. The subscription was inspected but never switched.
-- A pre-existing `devops-rg` resource group is present in Central India; it contains no AKS, ACR, storage account, or Log Analytics workspace. It will not be repurposed without an explicit design decision.
+- A dedicated state backend now exists in Central India: `rg-aksops-dev-tfstate`, StorageV2/LRS account `staksopsdevtf20260824`, and private `tfstate` container. It uses TLS 1.2 minimum, no public blob access, disabled shared-key access, and a `Storage Blob Data Contributor` data-plane assignment for the Terraform operator.
+- A pre-existing `devops-rg` resource group is also present in Central India; it contains no AKS, ACR, or Log Analytics workspace. It will not be repurposed without an explicit design decision.
+- The required Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, and Insights resource providers are registered.
 - GitHub CLI is authenticated as the fork owner with repository administration permission. The public repository's default branch is `main`, has no branch protection, and has no configured Actions secrets or variables.
 - Terraform 1.15.8, Helm 3.21.2, kubectl 1.34.1, and Docker 29.4.0 are installed.
 
 ## Files That Should Change Next
 
-- Local ignored `backend.hcl` and `terraform.tfvars` after an alert-recipient decision.
+- Local ignored `terraform.tfvars` after an alert-recipient decision.
 - Helm `image.repository` after Terraform produces the actual ACR login server.
 - Live tracking/validation documentation after each observed cloud result.
 - Final evidence, README, phase guides, resume, interview guide, and cleanup guide only after their prerequisites are actually validated.
@@ -99,4 +101,4 @@ The application is a deliberately simple nginx page. The Helm chart renders one 
 
 ## Audit Conclusion
 
-The local repository is correctly migrated through the source-cleanup phases and passes local structural checks. The remaining work is external, evidence-driven implementation: bootstrap an owner-controlled state backend, provision Azure, configure OIDC, perform the real GitOps/monitoring tests, and then replace inherited documentation with observed results. The immediate missing input is the Action Group email recipient; no Azure resource has been created or changed by this current execution.
+The local repository is correctly migrated through the source-cleanup phases and passes local structural checks. The owner-controlled state backend is initialized. The remaining work is evidence-driven implementation: provision Azure, configure OIDC, perform the real GitOps/monitoring tests, and then replace inherited documentation with observed results. The immediate missing input is the Action Group email recipient; no AKS, ACR, Log Analytics, or application resource has been created.

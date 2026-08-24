@@ -17,8 +17,8 @@ Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED
 | GitOps workflow structure | OIDC + ACR push + deterministic one-field update; no direct cluster deploy | Source review confirms expected permissions/steps and no AKS/Helm/Argo deploy command | PASS (static) | `.github/workflows/deploy-aks.yml` |
 | Remote source parity | Fork sees current local migration | Seven reviewed commits pushed to `origin/main` at `4b71395` | PASS | `git push origin main`, 2026-08-24 |
 | Azure account inventory | Active subscription is inspected without a switch | One enabled/default subscription inspected; project resources absent | PASS | Azure CLI output, 2026-08-24 |
-| Azure provider registration | Required resource providers available | Required namespaces are currently `NotRegistered` | NOT RUN | `02-PROJECT-STATUS.md` |
-| Terraform remote backend | Owner-controlled Entra-authenticated Azure Storage state works | Not created | BLOCKED | alert-recipient/deployment preparation pending |
+| Azure provider registration | Required resource providers available | Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, and Insights report `Registered` | PASS | Azure CLI output, 2026-08-24 |
+| Terraform remote backend | Owner-controlled Entra-authenticated Azure Storage state works | Private `tfstate` container, Blob Data Contributor role, and `terraform init -reconfigure` succeed without a storage key | PASS | `02-PROJECT-STATUS.md`, Azure CLI/Terraform output |
 | Terraform plan/apply | Expected infrastructure created without unexpected destroys | Not run | BLOCKED | backend, inputs, provider registration pending |
 | ACR | Registry exists; admin disabled; image tag is present | Not run | BLOCKED | Terraform/OIDC required |
 | AKS / ACR pull | Nodes Ready and workload can pull image | Not run | BLOCKED | Terraform/OIDC/GitOps required |

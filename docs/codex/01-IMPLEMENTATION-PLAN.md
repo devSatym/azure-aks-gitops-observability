@@ -83,15 +83,15 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 4 — Azure Backend Bootstrap
 
 - **Objective:** create an owner-controlled remote Terraform state backend.
-- **Current state:** Azure CLI is authenticated; no storage account/backend exists; no subscription was switched.
-- **Required changes:** choose an unused state resource-group/storage-account name, create the `tfstate` container, grant Terraform operator Blob data-plane access if needed, and create ignored `backend.hcl` from the example.
+- **Current state:** complete. Azure CLI remains on its inspected active subscription; `rg-aksops-dev-tfstate` / `staksopsdevtf20260824` / `tfstate` are initialized without a subscription switch.
+- **Required changes:** preserve the remote state backend; no source change is needed.
 - **Files affected:** ignored `backend.hcl`; tracking docs only.
 - **Commands/actions:** inspect active subscription, register required providers, create backend resources via Azure CLI, then `terraform init -reconfigure -backend-config=backend.hcl`.
-- **Expected result:** remote state uses Entra/Azure CLI authentication, not a storage key.
-- **Validation:** backend initialization succeeds and state is readable; no backend credential is tracked.
+- **Expected result:** achieved — remote state uses Entra/Azure CLI authentication, not a storage key.
+- **Validation:** `terraform init -reconfigure -backend-config=backend.hcl` and data-plane blob listing succeeded; `backend.hcl` is ignored.
 - **Rollback/recovery:** retain the backend until all project evidence is captured; delete only under an approved cleanup plan.
 - **Dependencies:** active Azure subscription and permission to create storage/RBAC.
-- **Human action required?:** no for bootstrap once the deployment input is confirmed.
+- **Human action required?:** no.
 
 ## Phase 5 — Terraform Plan and Apply
 

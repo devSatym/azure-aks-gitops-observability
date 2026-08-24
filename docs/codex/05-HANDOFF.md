@@ -2,12 +2,13 @@
 
 ## Where are we?
 
-The project is ready to begin Azure backend bootstrap and infrastructure provisioning. Audit, local source cleanup, and a post-audit Terraform correctness pass are complete. No project Azure resource has been created, modified, or verified yet.
+The project is ready to prepare a Terraform plan and provision application infrastructure. Audit, local source cleanup, a post-audit Terraform correctness pass, provider registration, and remote-state bootstrap are complete. Only the dedicated state backend has been created; no AKS/ACR/application resource exists yet.
 
 ## What works locally?
 
 - Terraform 1.15.8, AzureRM 4.81.0, Helm 3.21.2, kubectl 1.34.1, Docker 29.4.0, Azure CLI 2.89.1, Git, and GitHub CLI are installed.
 - `terraform init -backend=false`, `terraform fmt -check -recursive`, `terraform validate`, Helm lint/template, the local Docker build (prior unchanged source), and workflow structure review pass.
+- `terraform init -reconfigure -backend-config=backend.hcl` succeeds against the private state container using the Azure CLI/Entra session; no storage key is used.
 - Terraform uses an empty AzureRM backend with safe examples; no personal backend coordinate or storage key is committed.
 - AKS uses Container Insights managed-identity authentication, a kubelet `AcrPull` assignment, and a control-plane subnet `Network Contributor` assignment for its Azure CNI network.
 - Helm values are the sole image source, Argo has no image override, and CI builds/pushes a SHA image then commits only `image.tag`.
@@ -15,25 +16,24 @@ The project is ready to begin Azure backend bootstrap and infrastructure provisi
 
 ## What remains unverified?
 
-- Azure backend, provider registration, Terraform plan/apply, role effectiveness, ACR, AKS, OIDC, GitHub workflow run, image push, Argo, self-heal, Container Insights, KQL, alerts/email, Prometheus, and Grafana.
+- Terraform plan/apply, role effectiveness, ACR, AKS, OIDC, GitHub workflow run, image push, Argo, self-heal, Container Insights, KQL, alerts/email, Prometheus, and Grafana.
 - README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
 
 ## Important external facts
 
-- The active Azure subscription was inspected, not changed. It is effectively empty for this project; `devops-rg` exists but is empty and must not be repurposed automatically.
-- Required Azure resource providers are currently `NotRegistered`; register them before backend/apply and wait until they report `Registered`.
+- The active Azure subscription was inspected without a subscription switch. It now has the dedicated state backend: `rg-aksops-dev-tfstate`, `staksopsdevtf20260824`, and private `tfstate`; `devops-rg` remains empty and untouched.
+- Required Azure resource providers now report `Registered`.
 - The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Corrected source is pushed through `4b71395`; no Actions secrets or variables are configured.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
 
-The audit identified and corrected three pre-deployment defects: absent AKS custom-subnet permission, CrashLoop query mismatch, and cumulative restart alert behavior. It also corrected the operating sequence so Argo is installed before, but its Application is applied only after the first real CI-produced image tag exists.
+The audit identified and corrected three pre-deployment defects: absent AKS custom-subnet permission, CrashLoop query mismatch, and cumulative restart alert behavior. It also corrected the operating sequence so Argo is installed before, but its Application is applied only after the first real CI-produced image tag exists. A dedicated AzureRM backend was then created, secured with Entra RBAC, and initialized successfully.
 
 ## What command/action comes next?
 
 1. Obtain the user's Action Group recipient email.
-2. Register required Azure providers and create an owner-controlled state backend.
-3. Create ignored `backend.hcl` and `terraform.tfvars`, initialize remote state, plan, document cost/diff, and apply.
+2. Create ignored `terraform.tfvars`, plan, document cost/diff, and apply.
 
 ## What human input is needed?
 
