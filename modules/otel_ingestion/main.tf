@@ -201,8 +201,11 @@ locals {
   logs_ingestion_endpoint           = local.native_otlp_outputs.dataCollectionEndpointLogsIngestion.value
   metrics_ingestion_endpoint        = local.native_otlp_outputs.dataCollectionEndpointMetricsIngestion.value
 
-  collector_traces_endpoint  = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTel-Traces/otlp/v1/traces"
-  collector_logs_endpoint    = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTel-Logs/otlp/v1/logs"
+  # The DCR maps the individual Microsoft-OTel streams to Azure destinations,
+  # while the native OTLP HTTP ingestion contract uses the Microsoft-OTLP
+  # aggregate stream names in its request URLs. These names are case-sensitive.
+  collector_traces_endpoint  = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTLP-Traces/otlp/v1/traces"
+  collector_logs_endpoint    = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTLP-Logs/otlp/v1/logs"
   collector_metrics_endpoint = "${local.metrics_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Custom-Metrics-Otel/otlp/v1/metrics"
 }
 

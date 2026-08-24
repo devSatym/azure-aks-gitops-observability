@@ -79,6 +79,11 @@ opentelemetry-demo:
       name: otel-collector
     podLabels:
       azure.workload.identity/use: "true"
+    # Terraform owns the external endpoint ConfigMap. Bump this desired-state
+    # marker whenever that handoff changes so Argo rolls the collector and it
+    # reads the refreshed environment on pod start.
+    podAnnotations:
+      azure.monitor/otlp-config-revision: "2"
     extraEnvsFrom:
       - configMapRef:
           name: otel-azure-otlp-config

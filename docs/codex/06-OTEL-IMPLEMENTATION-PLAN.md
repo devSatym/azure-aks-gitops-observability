@@ -46,6 +46,12 @@ Publisher` role. A Terraform-managed ServiceAccount and ConfigMap carry the
 identity binding and non-secret endpoint configuration; no connection string or
 instrumentation key is committed to Git or injected into the workload.
 
+The DCR maps its detailed `Microsoft-OTel-*` streams to Azure destinations,
+but the native OTLP HTTP request URLs use the case-sensitive aggregate
+`Microsoft-OTLP-Traces` and `Microsoft-OTLP-Logs` stream names. The wrapper
+uses a desired-state revision annotation so any Terraform-owned endpoint change
+causes Argo CD to roll the collector and reload its environment.
+
 ## Intentional ARM exception
 
 AzureRM 4.81.0 models normal DCRs but not the native OTLP DCR fields required
