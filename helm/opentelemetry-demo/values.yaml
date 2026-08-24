@@ -23,6 +23,24 @@ opentelemetry-demo:
     enabled: false
 
   components:
+    # The quota-compatible two-node pool allows 60 pods. Once the legacy
+    # kube-prometheus-stack is removed, the platform baseline consumes 42 of
+    # those slots; the full upstream demo would add 22 more. Keep the core
+    # storefront, checkout, messaging, and telemetry paths, while omitting
+    # ancillary services that have no dependency from the retained flow.
+    # A three-node pool is the preferred setting when the subscription quota
+    # permits restoring the complete upstream component set.
+    accounting:
+      enabled: false
+    ad:
+      enabled: false
+    fraud-detection:
+      enabled: false
+    image-provider:
+      enabled: false
+    telemetry-docs:
+      enabled: false
+
     frontend-proxy:
       service:
         # This is the only public service for the primary workload.

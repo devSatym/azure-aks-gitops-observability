@@ -15,9 +15,19 @@ OpenTelemetry Demo becomes the primary workload in `otel-demo`.
   of scheduled requests. The temporary coexistence of the demo, the managed
   metrics agents, and `kube-prometheus-stack` would exceed the available pod
   headroom.
-- The smallest safe change is a Terraform-managed increase to three existing
-  `Standard_D2s_v5` nodes. This keeps the VM family unchanged and leaves room
-  for rollout and system pods.
+- The desired three-node `Standard_D2s_v5` overlap capacity was rejected by
+  Azure because the subscription's Central India regional and DSv5 vCPU quotas
+  are both fully consumed (4 of 4 vCPUs). The implemented migration therefore
+  retains two nodes and retires `kube-prometheus-stack` after managed metrics
+  validation, before the OTel Demo is reconciled. Three nodes remain the
+  recommended setting after a quota increase if overlap/headroom is needed.
+- The full pinned upstream demo renders 22 workload pods. The two-node cluster
+  permits 60 pods and its post-retirement platform baseline uses 42, so the
+  wrapper disables five ancillary, dependency-free components (`accounting`,
+  `ad`, `fraud-detection`, `image-provider`, and `telemetry-docs`). The
+  resulting 17-pod demo retains the storefront, checkout, messaging, load
+  generation, Collector, and multi-language service paths while leaving one
+  slot for recovery. Restore the full chart only after capacity increases.
 - Container Insights, its DCR/DCRA, the existing Log Analytics workspace, and
   the established KQL alert rules are retained.
 
@@ -70,7 +80,7 @@ shape. Everything else remains AzureRM-managed. The deployment uses
 ## Verification checklist
 
 - `terraform fmt -check`, `terraform validate`, and a reviewed plan show only
-  the intended migration resources and the three-node capacity change.
+  the intended migration resources with the quota-compatible two-node pool.
 - `helm dependency build`, `helm lint`, and `helm template` succeed for the
   wrapper and render no Jaeger, Prometheus, Grafana, or OpenSearch resources.
 - Argo CD reports `otel-demo` Synced and Healthy; all demo components,

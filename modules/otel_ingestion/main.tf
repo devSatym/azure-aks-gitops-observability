@@ -11,22 +11,22 @@ locals {
     contentVersion = "1.0.0.0"
     parameters = {
       dataCollectionRuleName = {
-        type = "string"
+        type = "String"
       }
       dataCollectionEndpointName = {
-        type = "string"
+        type = "String"
       }
       location = {
-        type = "string"
+        type = "String"
       }
       applicationInsightsResourceId = {
-        type = "string"
+        type = "String"
       }
       azureMonitorWorkspaceResourceId = {
-        type = "string"
+        type = "String"
       }
       logAnalyticsWorkspaceResourceId = {
-        type = "string"
+        type = "String"
       }
     }
     resources = [
@@ -130,19 +130,19 @@ locals {
     ]
     outputs = {
       dataCollectionRuleId = {
-        type  = "string"
+        type  = "String"
         value = "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleName'))]"
       }
       dataCollectionRuleImmutableId = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleName')), '2024-03-11', 'full').properties.immutableId]"
       }
       dataCollectionEndpointLogsIngestion = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2024-03-11', 'full').properties.logsIngestion.endpoint]"
       }
       dataCollectionEndpointMetricsIngestion = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2024-03-11', 'full').properties.metricsIngestion.endpoint]"
       }
     }

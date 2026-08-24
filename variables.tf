@@ -17,9 +17,9 @@ variable "environment" {
 }
 
 variable "node_count" {
-  description = "AKS node count"
+  description = "AKS node count. Keep the default within the currently available regional vCPU quota."
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "node_vm_size" {
