@@ -84,6 +84,9 @@ module "aks" {
   subnet_id                  = module.network.aks_subnet_id
   node_count                 = var.node_count
   node_vm_size               = var.node_vm_size
+  network_plugin_mode        = var.aks_network_plugin_mode
+  pod_cidr                   = var.aks_pod_cidr
+  node_max_pods              = var.node_max_pods
   log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
   tags                       = local.tags
 }

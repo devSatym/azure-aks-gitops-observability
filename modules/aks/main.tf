@@ -10,6 +10,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     node_count     = var.node_count
     vm_size        = var.node_vm_size
     vnet_subnet_id = var.subnet_id
+    max_pods       = var.node_max_pods
 
     # Azure materializes these default upgrade settings after cluster creation.
     # Declare them explicitly so a refresh does not propose a no-op AKS update.
@@ -31,8 +32,10 @@ resource "azurerm_kubernetes_cluster" "this" {
   workload_identity_enabled = true
 
   network_profile {
-    network_plugin    = "azure"
-    load_balancer_sku = "standard"
+    network_plugin      = "azure"
+    network_plugin_mode = var.network_plugin_mode
+    pod_cidr            = var.pod_cidr
+    load_balancer_sku   = "standard"
   }
 
   oms_agent {
