@@ -4,7 +4,9 @@ location     = "centralindia"
 project_name = "aksops"
 environment  = "dev"
 
-node_count   = 3
+# The current Central India subscription quota supports two D2s_v5 nodes.
+# Set to 3 only after obtaining sufficient regional vCPU quota.
+node_count   = 2
 node_vm_size = "Standard_D2s_v5"
 
 # Azure Managed Grafana Standard is optional and incurs recurring cost.

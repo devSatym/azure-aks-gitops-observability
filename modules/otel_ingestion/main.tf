@@ -11,22 +11,22 @@ locals {
     contentVersion = "1.0.0.0"
     parameters = {
       dataCollectionRuleName = {
-        type = "string"
+        type = "String"
       }
       dataCollectionEndpointName = {
-        type = "string"
+        type = "String"
       }
       location = {
-        type = "string"
+        type = "String"
       }
       applicationInsightsResourceId = {
-        type = "string"
+        type = "String"
       }
       azureMonitorWorkspaceResourceId = {
-        type = "string"
+        type = "String"
       }
       logAnalyticsWorkspaceResourceId = {
-        type = "string"
+        type = "String"
       }
     }
     resources = [
@@ -130,19 +130,19 @@ locals {
     ]
     outputs = {
       dataCollectionRuleId = {
-        type  = "string"
+        type  = "String"
         value = "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleName'))]"
       }
       dataCollectionRuleImmutableId = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dataCollectionRuleName')), '2024-03-11', 'full').properties.immutableId]"
       }
       dataCollectionEndpointLogsIngestion = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2024-03-11', 'full').properties.logsIngestion.endpoint]"
       }
       dataCollectionEndpointMetricsIngestion = {
-        type  = "string"
+        type  = "String"
         value = "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dataCollectionEndpointName')), '2024-03-11', 'full').properties.metricsIngestion.endpoint]"
       }
     }
@@ -201,8 +201,11 @@ locals {
   logs_ingestion_endpoint           = local.native_otlp_outputs.dataCollectionEndpointLogsIngestion.value
   metrics_ingestion_endpoint        = local.native_otlp_outputs.dataCollectionEndpointMetricsIngestion.value
 
-  collector_traces_endpoint  = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTel-Traces/otlp/v1/traces"
-  collector_logs_endpoint    = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTel-Logs/otlp/v1/logs"
+  # The DCR maps the individual Microsoft-OTel streams to Azure destinations,
+  # while the native OTLP HTTP ingestion contract uses the Microsoft-OTLP
+  # aggregate stream names in its request URLs. These names are case-sensitive.
+  collector_traces_endpoint  = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTLP-Traces/otlp/v1/traces"
+  collector_logs_endpoint    = "${local.logs_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Microsoft-OTLP-Logs/otlp/v1/logs"
   collector_metrics_endpoint = "${local.metrics_ingestion_endpoint}/datacollectionRules/${local.data_collection_rule_immutable_id}/streams/Custom-Metrics-Otel/otlp/v1/metrics"
 }
 

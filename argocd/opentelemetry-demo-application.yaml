@@ -8,10 +8,9 @@ spec:
 
   source:
     repoURL: https://github.com/devSatym/azure-aks-gitops-observability.git
-    # This preview application follows the dedicated migration branch. Change
-    # this to main in the merge commit so Argo CD continues to track released
-    # desired state.
-    targetRevision: feature/otel-demo-azure-observability
+    # The validation branch has been promoted. Keep Argo CD on released Git
+    # desired state while retaining the feature branch as a rollback reference.
+    targetRevision: main
     path: helm/opentelemetry-demo
 
   destination:
