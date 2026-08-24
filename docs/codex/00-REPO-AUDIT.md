@@ -1,106 +1,102 @@
 # Repository Audit
 
-Date: 2026-08-23
-Scope: local repository at the start of the Azure AKS GitOps CI/CD & Observability implementation.
+Date: 2026-08-24
+Scope: current checkout of Azure AKS GitOps CI/CD & Observability before any new Azure-side mutation.
 
-## Repository and Git State
+## Audit Method and Git State
 
-- Active branch: `main`.
-- Configured remote: `https://github.com/devSatym/azure-aks-gitops-observability.git`.
-- Existing untracked file: `plan.md`. It is the user-provided implementation brief and has been preserved.
-- No `AGENTS.md`, Terraform lock file, local backend file, local tfvars file, or Terraform state file is present.
-- Azure CLI and GitHub CLI are not installed in this environment. Azure account, subscription, deployed resources, GitHub secrets, repository variables, and workflow runs cannot be verified locally yet.
+- Inspected every tracked Terraform root/module file, workflow, Helm chart template/value, Argo CD Application, application file, phase document, README, ignore rule, and provider lock file.
+- Ran the required ownership/deployment searches. `plan.md` is an untracked user-provided brief and was deliberately left untouched.
+- No repository `AGENTS.md` exists. The active branch is `main`; its only remote is `https://github.com/devSatym/azure-aks-gitops-observability.git`.
+- Local `main` is seven reviewed commits ahead of `origin/main` after the associated source and documentation commits are recorded. The worktree is otherwise clean apart from `plan.md`.
+- The prior audit text described the upstream starting point. This document is the reconciled, current-state audit; historical upstream values remain documented only as migration history.
 
-## Structure
+## Repository Structure
 
 ```text
 .
-├── .github/workflows/deploy-aks.yml
-├── app/                         # static nginx application and Dockerfile
-├── argocd/                      # Argo CD Application manifest
-├── helm/azure-webapp/            # active Helm chart candidate
-├── k8s/                          # legacy raw manifests; not referenced by live code
-├── modules/                      # Terraform modules
-├── docs/phases/                  # historical phase documentation
-├── docs/screenshots/             # existing, unverified screenshot assets
+├── .github/workflows/deploy-aks.yml      # CI build/push/GitOps promotion
+├── app/                                  # static nginx application
+├── argocd/                               # Argo CD Application
+├── helm/azure-webapp/                    # sole active deployment definition
+├── modules/                              # Terraform modules
+├── docs/codex/                           # live audit, plan, status, evidence, decisions, handoff
+├── docs/phases/                          # inherited historical guides; not current evidence
+├── docs/screenshots/                     # inherited, unverified image assets
 ├── main.tf, providers.tf, variables.tf, outputs.tf
-└── README.md
+├── backend.hcl.example
+└── terraform.tfvars.example
 ```
+
+There is no `k8s/` directory in the current checkout. The legacy raw manifests were removed in local commit `72f0869` after Helm lint/template validation.
 
 ## Current Architecture Verified in Code
 
-Terraform composes a resource group, VNet (`10.20.0.0/16`), AKS subnet (`10.20.1.0/24`), Basic ACR, Log Analytics workspace, AKS cluster, Action Group, and three scheduled-query alerts. AKS uses a system-assigned control-plane identity, Azure CNI, a Standard load balancer, one configurable node pool, and the OMS agent connected to the workspace. The kubelet identity receives `AcrPull` on the ACR. ACR admin credentials are disabled.
+Terraform creates one resource group, VNet (`10.20.0.0/16`), AKS subnet (`10.20.1.0/24`), Basic ACR with admin credentials disabled, Log Analytics workspace, AKS cluster, Action Group, and three scheduled-query alert rules. AKS uses a system-assigned identity, Azure CNI, Standard Load Balancer, one configurable node pool, the OMS agent, and managed-identity monitoring authentication. The AKS kubelet identity receives `AcrPull` scoped to the created ACR.
 
-The application is a static nginx page. The Helm chart renders a Deployment and a LoadBalancer Service. The Argo CD Application is configured for automated sync, pruning, and self-heal, but its Helm parameters override the chart's image values. GitHub Actions currently authenticates through Azure OIDC, builds a seven-character-SHA-tagged image, pushes it to ACR, then retrieves AKS credentials. It does not change Git desired state or deploy anything after retrieving credentials.
+The application is a deliberately simple nginx page. The Helm chart renders one two-replica Deployment and one LoadBalancer Service. `argocd/azure-webapp-application.yaml` targets this fork and chart with automated sync, prune, and self-heal. GitHub Actions uses Azure OIDC, builds and pushes a seven-character-SHA tag, changes only Helm `image.tag`, then commits/pushes that desired-state change. It contains no AKS credential, Helm upgrade, `kubectl apply`, or Argo sync step.
 
 ## Terraform Audit
 
-| Area | Verified state | Finding |
+| Area | Verified current state | Result / follow-up |
 | --- | --- | --- |
-| Terraform | `>= 1.6.0`; local CLI is 1.15.8 | No initialization or validation has run yet. |
-| Providers | `azurerm ~> 4.0`, `random ~> 3.6` | Lock file is incorrectly ignored and absent. |
-| Backend | AzureRM backend hardcoded in `providers.tf` | References `rg-terraform-state`, `sttfstatram2026`, container `tfstate`, and key `aks-platform/terraform.tfstate`; must be replaced by an empty backend plus ignored local config. |
-| Identity | AKS system identity plus kubelet identity | `AcrPull` is correctly scoped to the created ACR. |
-| Monitoring | `oms_agent` with workspace ID | Managed-identity monitoring authentication support has not yet been checked against the installed AzureRM provider schema. |
-| Alerts | Node non-Ready, failed/CrashLoop pod, and restart-count rules | Each evaluates every 5 minutes over 15 minutes and sends email through one Action Group. Actual table ingestion/schema and alert firing remain untested. |
-| Inputs | location, project name, environment, node count/size, alert email | `alert_email` has no default, so an example tfvars file is needed. |
-| Naming | random six-character suffixes | Supports unique resource names. `Owner = devSatym` is project-specific but is not an upstream name and will be retained unless the owner asks for a different tag policy. |
+| Terraform | Required version `>= 1.6.0`; local CLI 1.15.8 | `fmt`, backend-disabled init, and `validate` pass. |
+| Providers | AzureRM `~> 4.0`, Random `~> 3.6`; lock pins 4.81.0 / 3.9.0 | Lock file is tracked. |
+| Backend | `backend "azurerm" {}` only | Environment-specific backend is correctly delegated to ignored `backend.hcl`. No remote backend exists yet. |
+| Input examples | `backend.hcl.example` and `terraform.tfvars.example` exist | Both contain placeholders/examples only. A real ignored `terraform.tfvars` still needs an alert recipient. |
+| AKS/ACR identity | `AcrPull` uses the kubelet object ID and ACR scope | Correct least-privilege pull relationship; apply-time validation remains pending. |
+| Monitoring auth | `oms_agent.msi_auth_for_monitoring_enabled = true` | `terraform validate` succeeds with the pinned provider, and current AzureRM docs list this optional setting. |
+| Alerts | Node Not Ready, failed/CrashLoop pod, frequent restart rules | Each uses a 5-minute evaluation over 15 minutes; actual tables, delivery, and alert firing remain unverified. |
 
-## CI/CD and GitOps Audit
+`terraform providers schema` cannot run until a real AzureRM backend is initialized because Terraform requires backend initialization for that subcommand. The pinned-provider configuration itself validates successfully, which verifies the configured AKS argument syntactically.
 
-| Area | Verified state | Required correction |
+## CI/CD, Helm, and Argo CD Audit
+
+| Area | Verified current state | Result / follow-up |
 | --- | --- | --- |
-| Workflow | `.github/workflows/deploy-aks.yml` runs on `main` app/workflow changes | Rename its displayed purpose to build, push, and update GitOps; add write permission and safe concurrency. |
-| Azure auth | `azure/login@v2` with client, tenant, subscription IDs | This is OIDC-compatible and has no client secret in code. Federated credential and RBAC are not yet verified. |
-| ACR delivery | Build and push use `GITHUB_SHA::7` | Retain immutable tag, then write it to Helm `image.tag`. |
-| CI permissions | `id-token: write`, `contents: read` | Set `contents: write` so the workflow can commit its desired-state update. |
-| CI AKS access | Loads `AKS_RESOURCE_GROUP`, `AKS_CLUSTER_NAME`, and `DEPLOYMENT_NAME`; calls `az aks get-credentials` | Remove. CI must not require routine AKS administration after GitOps handoff. |
-| Helm | Chart is named `azure-webapp`; values use empty repository and `latest` | Make values the single image source. The real ACR login server is only knowable after Terraform deployment; use a clearly documented bootstrap placeholder before then. |
-| Argo CD | Repo URL points to nonexistent/outdated `devSatym/azure-aks-terraform-cicd-monitoring`; image overrides reference upstream ACR and `v1` | Point to the actual origin repository and remove image parameters. |
-| Raw manifests | `k8s/azure-webapp.yaml` and `k8s/nginx.yaml` | Neither is referenced by workflow, Argo, or Terraform. They compete with Helm and contain stale ACR / `latest` references; retire them after the Helm chart validates. |
+| Workflow | Display name is **Build, Push and Update GitOps** | Triggered by application/workflow changes on `main`; `[skip ci]` prevents its own promotion commit from looping. |
+| Azure auth | `azure/login@v2` accepts only client, tenant, and subscription IDs | OIDC-compatible; no client secret or `AZURE_CREDENTIALS` appears in tracked source. Entra federation is not configured yet. |
+| Permissions | `id-token: write`, `contents: write` | Sufficient for OIDC and its GitOps commit; repo has no configured secrets/variables yet. |
+| Artifact delivery | `GITHUB_SHA::7` tags `ACR_LOGIN_SERVER/IMAGE_NAME` | Immutable promotion pattern is correct; live ACR validation remains pending. |
+| Desired state | Workflow deterministically updates exactly one `image.tag` line | `values.yaml` is the image source of truth. |
+| Helm | Chart/application/deployment/service all use `azure-webapp` | Lint/template pass. The ACR repository is a non-deployable bootstrap placeholder until Terraform outputs the real login server. |
+| Argo CD | Points to `devSatym/azure-aks-gitops-observability`, `helm/azure-webapp`, `main` | No Helm image overrides remain; cluster installation/sync is pending. |
 
-## Application and Documentation Audit
+## Application, Documentation, and Evidence Audit
 
-- `app/index.html` has two stray headings after `</html>` and describes direct GitHub Actions deployment. It needs a minimal GitOps/observability presentation.
-- The README accurately names many intended components but makes completed/validated claims that local code and available tools do not prove. It still describes a "platform," publishes inherited screenshots as project evidence, documents legacy raw-manifest/Helm direct deployment, lists intentionally excluded technologies as future improvements, and omits the CI-to-Git desired-state update.
-- Phase documents are historical narrative, not evidence-backed validation. Several instruct direct `kubectl apply` or Helm deployment; these conflict with the final Argo-owned deployment model.
-- Existing `docs/screenshots/*.png` are inherited assets. They cannot be treated as evidence of this Azure environment until the owner captures fresh screenshots.
-- No Prometheus/Grafana or Argo installation manifests/scripts are present; both must be installed with Helm only after AKS is available.
+- `app/index.html` now accurately presents the requested lightweight AKS GitOps/observability project.
+- `README.md` and `docs/phases/` are inherited material and are not yet evidence-backed: they call this a platform, imply live validation, describe direct raw-manifest/Helm deployment, and embed inherited screenshots as evidence. They must be rewritten only after cloud validation.
+- Existing `docs/screenshots/*.png` are inherited assets. They must not be represented as evidence from this Azure subscription; a fresh checklist and owner-captured evidence are pending.
+- `docs/architecture/architecture-diagram.png` is inherited and describes an earlier direct GitHub Actions → Helm flow. The final README must use the verified Mermaid architecture instead of this asset.
+- `docs/codex/` is the only current source of operational truth until the final README rewrite.
 
-## Hardcoded / Stale Values Found
+## Ownership, Stale Values, and Security Search
 
-| File | Value or behavior | Classification |
-| --- | --- | --- |
-| `providers.tf` | `rg-terraform-state`, `sttfstatram2026`, `aks-platform/terraform.tfstate` | upstream environment coupling |
-| `argocd/azure-webapp-application.yaml` | old fork URL, `acraksdemodevjv094d.azurecr.io/azure-webapp`, `v1` | stale GitOps source and image override |
-| `k8s/azure-webapp.yaml` | `acraksdemodevaafof8.azurecr.io/azure-webapp:v1` | legacy deployment configuration |
-| `k8s/nginx.yaml` | `nginx:latest` | legacy manifest / mutable tag |
-| `helm/azure-webapp/values.yaml` | empty repository, `latest` | invalid final desired state |
-| `.gitignore` | ignores `.terraform.lock.hcl`; does not ignore `backend.hcl` | lock-file and local-backend hygiene issue |
-| workflow | retrieves AKS credentials but never uses them | unnecessary direct cluster access |
+- No active source contains `rambabu`, `ram-webapp`, `ram-aks-web`, `acraksdemo`, `sttfstatram`, `rg-terraform-state`, `latest`, `client_secret`, `AZURE_CREDENTIALS`, or raw-manifest deployment commands.
+- Historical strings occur only in the prior audit history and inherited documentation, which will be rewritten rather than treated as active configuration.
+- The current remote owner is `devSatym`; its matching Terraform `Owner` tag is project-specific rather than an upstream coupling. It is retained as-is to avoid unnecessary resource naming/tag changes.
+- `.gitignore` protects `.terraform/`, state, plans, `terraform.tfvars`, `backend.hcl`, local keys, environments, and kubeconfig. No state, backend configuration, credential, token, or generated Grafana password is tracked.
 
-## Security and Authentication Model
+## External Environment Audit (Read-only)
 
-- Desired CI model: GitHub OIDC federation to a Microsoft Entra application, with `AcrPush` scoped to the project ACR.
-- Current workflow has the right OIDC action inputs and no client secret in repository code.
-- ACR admin authentication is disabled, and AKS receives `AcrPull` through the kubelet identity.
-- The current workflow's AKS credential retrieval is over-privileged for its real responsibility and will be removed.
-- No credentials, tokens, state, or kubeconfig were found in tracked files.
+- Azure CLI 2.89.1 is installed and authenticated to one enabled/default subscription. The subscription was inspected but never switched.
+- A pre-existing `devops-rg` resource group is present in Central India; it contains no AKS, ACR, storage account, or Log Analytics workspace. It will not be repurposed without an explicit design decision.
+- GitHub CLI is authenticated as the fork owner with repository administration permission. The public repository's default branch is `main`, has no branch protection, and has no configured Actions secrets or variables.
+- Terraform 1.15.8, Helm 3.21.2, kubectl 1.34.1, and Docker 29.4.0 are installed.
 
-## Files Expected to Change
+## Files That Should Change Next
 
-- `.gitignore`, `providers.tf`, `backend.hcl.example`, `terraform.tfvars.example`.
-- `modules/aks/main.tf` only if provider-schema verification supports managed-identity monitoring authentication.
-- `app/index.html`, Helm values/templates as justified, Argo Application, GitHub workflow.
-- Removal of `k8s/` after rendered Helm equivalence is verified.
-- README and final operational documentation, including this directory.
+- Local ignored `backend.hcl` and `terraform.tfvars` after an alert-recipient decision.
+- Helm `image.repository` after Terraform produces the actual ACR login server.
+- Live tracking/validation documentation after each observed cloud result.
+- Final evidence, README, phase guides, resume, interview guide, and cleanup guide only after their prerequisites are actually validated.
 
-## Files Expected to Remain Functionally Unchanged
+## Files That Should Remain Functionally Unchanged
 
-- Terraform resource-group, network, ACR, monitoring, and alert-module architecture, except validated compatibility or documentation corrections.
-- The simple nginx Dockerfile and the fixed AKS-to-ACR `AcrPull` relationship.
-- Existing upstream license/copyright material: none was found in this checkout, so no license will be added on the upstream author's behalf.
+- Terraform module topology, ACR admin-disabled setting, kubelet `AcrPull` assignment, simple nginx Dockerfile, and intentionally limited scope.
+- The active Helm + Argo CD model must remain the sole application deployment model.
+- No license was found; none will be added on the upstream author's behalf.
 
 ## Audit Conclusion
 
-The repository has the intended building blocks but is not yet a finished GitOps project. The smallest safe path is to remove ownership coupling, make Helm values the sole image source, convert CI to artifact build/push plus Git update, and then perform evidence-backed cloud validation after Azure tooling and user authentication are available.
+The local repository is correctly migrated through the source-cleanup phases and passes local structural checks. The remaining work is external, evidence-driven implementation: bootstrap an owner-controlled state backend, provision Azure, configure OIDC, perform the real GitOps/monitoring tests, and then replace inherited documentation with observed results. The immediate missing input is the Action Group email recipient; no Azure resource has been created or changed by this current execution.

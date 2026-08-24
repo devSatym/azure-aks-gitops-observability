@@ -1,155 +1,374 @@
 # Implementation Plan
 
-Date: 2026-08-23
-Principle: implementation is phase-based; only observed validation is marked as passed.
+Date: 2026-08-24
+Rule: only observed results are marked as validated. No client secret, ACR admin credential, direct CI-to-AKS deployment, or destructive cleanup will be substituted for the intended design.
 
 ## Target Architecture
 
 ```mermaid
 flowchart TD
   Dev[Developer] --> GitHub[GitHub repository]
-  GitHub --> CI[GitHub Actions: build, push, update GitOps]
-  CI -->|OIDC, short-lived token| Azure[Microsoft Entra ID / Azure]
+  GitHub --> CI[GitHub Actions]
+  CI -->|OIDC / short-lived token| Entra[Microsoft Entra ID]
   CI --> Build[Docker build]
-  Build --> ACR[Azure Container Registry<br/>azure-webapp:&lt;git-sha&gt;]
-  CI -->|update image.tag and commit| GitHub
+  Build --> ACR[Azure Container Registry\nazure-webapp:git-sha]
+  CI -->|change Helm image.tag\ncommit desired state| GitHub
   GitHub --> Argo[Argo CD]
-  Argo --> Helm[Helm chart and values]
+  Argo --> Helm[Helm chart + values]
   Helm --> AKS[Azure Kubernetes Service]
   AKS --> Insights[Container Insights]
-  Insights --> LAW[Log Analytics Workspace]
-  LAW --> KQL[KQL scheduled-query alerts]
-  KQL --> AG[Action Group email]
+  Insights --> LAW[Log Analytics]
+  LAW --> Alerts[KQL scheduled-query alerts]
+  Alerts --> AG[Action Group email]
   AKS --> Prom[Prometheus]
   Prom --> Grafana[Grafana]
 ```
 
-## Phase 0 — Repository Audit
+## Current Gate
 
-**Objective:** establish verified starting state before implementation.
-**Current state:** complete; findings are in `00-REPO-AUDIT.md`.
-**Required changes:** documentation only.
-**Files affected:** `docs/codex/00-REPO-AUDIT.md`, status, validation, decisions, handoff.
-**Commands/actions:** inspect Git, all Terraform/modules, workflow, chart, Argo manifest, application, docs, and configured references.
-**Expected result:** an implementation plan based on code rather than README claims.
-**Validation:** audit records hardcoded backend, Argo overrides, direct CI AKS access, legacy manifests, and stale documentation.
-**Rollback/recovery:** documentation is additive.
-**Dependencies:** none.
-**Human action required?:** no.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. No project AKS, ACR, Log Analytics workspace, storage account, or backend exists. The Azure resource-provider registrations required by the configuration are not yet registered. The only missing Terraform input is a user-chosen Action Group recipient; no email address is written to tracked files.
 
-## Phase 1 — Planning and Tracking
+## Phase 0 — Complete Repository Audit
 
-**Objective:** create durable project-state, validation, decision, and handoff records.
-**Current state:** in progress at plan creation; no cloud state is assumed.
-**Required changes:** maintain the six `docs/codex/` documents continuously.
-**Files affected:** `docs/codex/*.md`.
-**Commands/actions:** record each meaningful implementation and command result.
-**Expected result:** a future session can safely resume.
-**Validation:** handoff identifies exact current blocker/action.
-**Rollback/recovery:** revert documentation only if factually wrong.
-**Dependencies:** Phase 0.
-**Human action required?:** no.
+- **Objective:** establish code and environment facts before further implementation.
+- **Current state:** complete and reconciled in `00-REPO-AUDIT.md`.
+- **Required changes:** documentation only.
+- **Files affected:** `docs/codex/00-REPO-AUDIT.md`, status, validation, decisions, handoff.
+- **Commands/actions:** inspect all tracked implementation/docs, remote/status, ownership markers, local CLIs, Azure inventory, and GitHub configuration names.
+- **Expected result:** a plan based on current code rather than inherited claims.
+- **Validation:** audit records the local-only commits, no active upstream coupling, and external prerequisites.
+- **Rollback/recovery:** documentation is additive/correctable.
+- **Dependencies:** none.
+- **Human action required?:** no.
 
-## Phase 2 — Project Identity and Deployment Source
+## Phase 1 — Implementation Plan and Live Tracking
 
-**Objective:** finalize the DevOps project identity and one active deployment model.
-**Current state:** chart/deployment already use `azure-webapp`; static page and docs are stale; raw `k8s/` is unused.
-**Required changes:** update page wording, remove stale raw manifests after chart validation, and remove their references from docs.
-**Files affected:** `app/index.html`, `k8s/` (deletion), README and phase docs.
-**Commands/actions:** render/lint Helm first; search for obsolete manifest references after removal.
-**Expected result:** Helm + Argo CD is the only active application-deployment model.
-**Validation:** `helm lint`, `helm template`, and no `k8s/` deployment references.
-**Rollback/recovery:** restore deleted legacy files from Git if needed; Helm remains source of truth.
-**Dependencies:** Helm validation tooling.
-**Human action required?:** no.
+- **Objective:** make progress resumable and evidence-led.
+- **Current state:** this plan and the six `docs/codex/` trackers exist; ongoing.
+- **Required changes:** update status, evidence, decisions, and handoff after meaningful work.
+- **Files affected:** `docs/codex/*.md`.
+- **Commands/actions:** record commands/results without tokens, passwords, state, storage keys, or email addresses.
+- **Expected result:** a new session can resume safely.
+- **Validation:** status names the exact phase, blocker, next command, and observed results.
+- **Rollback/recovery:** correct inaccurate prose; never manufacture evidence.
+- **Dependencies:** Phase 0.
+- **Human action required?:** no.
 
-## Phase 3 — Terraform State, Inputs, and Quality
+## Phase 2 — Clean Project Identity
 
-**Objective:** remove upstream state coupling and establish reproducible local configuration.
-**Current state:** hardcoded backend, ignored lock file, missing examples; provider not initialized.
-**Required changes:** empty `backend "azurerm" {}`, a Microsoft Entra ID/Azure CLI `backend.hcl.example`, `.gitignore` protection for `backend.hcl`, lock-file tracking, and `terraform.tfvars.example`. Verify managed-identity monitoring support from the installed provider schema before any change to `modules/aks/main.tf`.
-**Files affected:** `.gitignore`, `providers.tf`, `backend.hcl.example`, `terraform.tfvars.example`, optionally `modules/aks/main.tf`.
-**Commands/actions:** `terraform fmt -recursive`; `terraform init -backend=false`; inspect provider schema; `terraform validate`; later init with local `backend.hcl`.
-**Expected result:** code contains no personal backend coordinates and can validate without remote-state access.
-**Validation:** fmt check, validate, tracked lock file; provider-schema evidence for monitoring choice.
-**Rollback/recovery:** retain ignored `backend.hcl`; use `terraform init -reconfigure -backend-config=backend.hcl` after bootstrap.
-**Dependencies:** Terraform and provider download.
-**Human action required?:** no for local validation; yes before backend bootstrap if Azure login is unavailable.
+- **Objective:** retain one DevOps identity and the `azure-webapp` workload name.
+- **Current state:** complete locally: page, chart, Application, image name, Deployment, and Service use `azure-webapp`.
+- **Required changes:** remove remaining inherited branding only when final docs are rewritten; retain required upstream credit.
+- **Files affected:** final `README.md`, `docs/phases/*`, `docs/RESUME.md`, `docs/INTERVIEW-PREP.md`.
+- **Commands/actions:** repeat repository-wide stale-value search after documentation changes.
+- **Expected result:** no description as a platform/internal developer platform and no competing identity.
+- **Validation:** active source has no upstream naming markers.
+- **Rollback/recovery:** restore only a necessary attribution reference.
+- **Dependencies:** Phase 0.
+- **Human action required?:** no.
 
-## Phase 4 — Azure Backend Bootstrap and Infrastructure
+## Phase 3 — Terraform State, Inputs, and Quality Corrections
 
-**Objective:** create an owner-controlled remote state backend and provision the planned Azure resources.
-**Current state:** Azure CLI is absent and subscription state is unverified.
-**Required changes:** create local ignored `backend.hcl` and ignored `terraform.tfvars` only after confirming active subscription and values.
-**Files affected:** local ignored files only; status/validation docs.
-**Commands/actions:** install/use Azure CLI, `az account show`, inspect active subscription, create a state RG/storage/container through Azure CLI, initialize backend, run plan, summarize additions/changes/destroys and major cost drivers, then apply.
-**Expected result:** resource group, VNet/subnet, ACR, Log Analytics, AKS, ACR pull role, Action Group, and three alert rules exist.
-**Validation:** Terraform apply/output collection, `az acr show`, AKS nodes Ready, `kubectl get pods -A`; no ACR admin enablement.
-**Rollback/recovery:** do not run destroy without explicit user approval; preserve remote state backend until all evidence is captured.
-**Dependencies:** Azure CLI, authenticated user, known active subscription, permitted quota, chosen alert email.
-**Human action required?:** yes — Azure login/subscription confirmation and an alert-email value.
+- **Objective:** keep state owner-controlled and correct deployment-blocking Terraform issues before Azure apply.
+- **Current state:** empty AzureRM backend, ignored local configuration, input examples, tracked lock, and monitoring MSI setting are already present; local fmt/init/validate pass.
+- **Required changes:** add subnet-scoped `Network Contributor` for the AKS control-plane identity; make managed-identity role assignments resilient to directory replication; correct CrashLoop and restart-delta KQL rules.
+- **Files affected:** `main.tf`, `modules/aks/outputs.tf`, `modules/alerts/main.tf`, `docs/codex/04-DECISIONS.md`, validation/status.
+- **Commands/actions:** patch the minimum Terraform, then run `terraform fmt -recursive`, `terraform init -backend=false`, and `terraform validate`.
+- **Expected result:** Azure CNI AKS has its required custom-subnet permission and an intentional failed pod can match an alert rule without a permanently cumulative restart condition.
+- **Validation:** Terraform validation; later real role/query checks after apply.
+- **Rollback/recovery:** revert only the newly added role assignment/query changes; do not change to a client secret or ACR admin credential.
+- **Dependencies:** Phase 0; current AzureRM/Azure Monitor documentation.
+- **Human action required?:** no.
 
-## Phase 5 — GitHub OIDC and Least-Privilege CI
+## Phase 4 — Azure Backend Bootstrap
 
-**Objective:** establish passwordless GitHub-to-Azure ACR publishing.
-**Current state:** OIDC action code exists; federated identity, RBAC, GitHub configuration, and runs are unverified.
-**Required changes:** prepare and run owner-scoped Entra app/service-principal/federated-credential setup; grant only `AcrPush` at this ACR; set required GitHub secrets and repository variables.
-**Files affected:** documentation/status; GitHub settings outside repository.
-**Commands/actions:** derive `devSatym/azure-aks-gitops-observability` from `origin`; create a main-branch federated subject (`repo:devSatym/azure-aks-gitops-observability:ref:refs/heads/main`) after current official syntax is verified; configure `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `ACR_LOGIN_SERVER`, and `IMAGE_NAME=azure-webapp`.
-**Expected result:** CI can log in through OIDC and push to ACR without client secrets or AKS-admin access.
-**Validation:** a real workflow run and ACR tag listing.
-**Rollback/recovery:** remove only created role assignment/federated credential if configuration is wrong; do not broaden permissions.
-**Dependencies:** deployed ACR, Azure/Entra permission, GitHub repository admin access.
-**Human action required?:** yes — GitHub/Azure authorization where interactive access is required.
+- **Objective:** create an owner-controlled remote Terraform state backend.
+- **Current state:** Azure CLI is authenticated; no storage account/backend exists; no subscription was switched.
+- **Required changes:** choose an unused state resource-group/storage-account name, create the `tfstate` container, grant Terraform operator Blob data-plane access if needed, and create ignored `backend.hcl` from the example.
+- **Files affected:** ignored `backend.hcl`; tracking docs only.
+- **Commands/actions:** inspect active subscription, register required providers, create backend resources via Azure CLI, then `terraform init -reconfigure -backend-config=backend.hcl`.
+- **Expected result:** remote state uses Entra/Azure CLI authentication, not a storage key.
+- **Validation:** backend initialization succeeds and state is readable; no backend credential is tracked.
+- **Rollback/recovery:** retain the backend until all project evidence is captured; delete only under an approved cleanup plan.
+- **Dependencies:** active Azure subscription and permission to create storage/RBAC.
+- **Human action required?:** no for bootstrap once the deployment input is confirmed.
 
-## Phase 6 — Helm, Argo CD, and CI-to-GitOps Handoff
+## Phase 5 — Terraform Plan and Apply
 
-**Objective:** make Git Helm values the single desired-state source and make Argo CD deployment owner.
-**Current state:** values use an empty/latest image, Argo overrides values with stale upstream coordinates, and CI only pushes an image.
-**Required changes:** set a documented bootstrap image repository/tag policy, remove Argo image parameters, point Argo to origin repository, set CI `contents: write`, update only `image.tag`, commit using `github-actions[bot]` with `[skip ci]`, add concurrency, and remove AKS variables/credentials step.
-**Files affected:** Helm values, Argo Application, workflow, README/phase docs/decisions.
-**Commands/actions:** YAML and Helm render validation; inspect the exact values-file diff logic; search for direct CI deploy commands.
-**Expected result:** CI owns build/push/Git update; Argo owns sync/reconciliation; SHA tags are immutable.
-**Validation:** local workflow structure review; after deployment, one source-change run yields an ACR image, one GitOps commit, a synced/healthy Argo app, a rollout, and reachable page.
-**Rollback/recovery:** change `image.tag` back to a known-good SHA and commit; let Argo reconcile.
-**Dependencies:** deployed ACR, configured CI identity, GitHub write permission, AKS.
-**Human action required?:** yes for external GitHub/Azure configuration and real execution.
+- **Objective:** provision one intended Azure environment with no unexpected destruction.
+- **Current state:** no project resources exist; examples propose Central India, `aksops`, two `Standard_D2s_v5` nodes, but no real tfvars file exists.
+- **Required changes:** create ignored `terraform.tfvars`, choose region/SKU based on quota and cost, and populate the Action Group recipient.
+- **Files affected:** ignored `terraform.tfvars`, ignored `tfplan`, status/validation docs.
+- **Commands/actions:** `fmt -check`, `validate`, `plan -out=tfplan`; document adds/changes/destroys and major cost drivers; apply only the reviewed plan.
+- **Expected result:** resource group, VNet/subnet, ACR, AKS, Log Analytics, ACR pull/network roles, Action Group, and three alerts exist.
+- **Validation:** collect outputs; inspect AKS/ACR; `kubectl get nodes` and `kubectl get pods -A` after credentials are acquired locally.
+- **Rollback/recovery:** do not run destroy; resolve quota/provider errors with the smallest documented change.
+- **Dependencies:** Phase 4, quota, selected deployment inputs, alert recipient.
+- **Human action required?:** **yes — provide/confirm the alert recipient before a real plan/apply.**
 
-## Phase 7 — Argo CD Install and GitOps Validation
+## Phase 6 — GitHub to Azure OIDC
 
-**Objective:** install Argo CD by Helm and prove synchronization/self-healing.
-**Current state:** only Application manifest is stored.
-**Required changes:** none to Terraform; install Argo in namespace `argocd`, then apply the manifest.
-**Files affected:** status, validation, handoff, README/operations docs.
-**Commands/actions:** official current Helm installation steps; `kubectl get pods -n argocd`; apply Application; inspect application status; scale deployment away from desired replicas and observe restore.
-**Expected result:** core pods healthy, Application Synced/Healthy, desired replicas restored automatically.
-**Validation:** Argo status plus timestamped drift test.
-**Rollback/recovery:** delete Application or Helm uninstall Argo only as documented cleanup, never automatically.
-**Dependencies:** reachable AKS cluster, GitHub repo accessibility.
-**Human action required?:** no after Azure access is usable.
+- **Objective:** grant CI passwordless, ACR-only publishing access.
+- **Current state:** workflow code is ready; the fork has no Actions secrets/variables and no Entra application/federated credential is known.
+- **Required changes:** create/reuse a dedicated Entra application/service principal; add a main-branch GitHub OIDC federated credential; assign `AcrPush` at the created ACR; set the three `AZURE_*` secrets and three non-secret ACR/image variables.
+- **Files affected:** GitHub/Azure configuration and tracking docs; no client secret file.
+- **Commands/actions:** derive `devSatym/azure-aks-gitops-observability`, use subject `repo:devSatym/azure-aks-gitops-observability:ref:refs/heads/main`, and verify with current official Azure/GitHub OIDC guidance.
+- **Expected result:** CI can log in with a short-lived token and push only to the project ACR.
+- **Validation:** a real workflow OIDC login and ACR SHA-tag listing.
+- **Rollback/recovery:** remove only the created federation/RBAC if misconfigured; never broaden to subscription Contributor.
+- **Dependencies:** deployed ACR, Entra/RBAC permission, GitHub repository admin access.
+- **Human action required?:** may be required if tenant policy blocks app/federation creation.
 
-## Phase 8 — Azure Monitoring, Alerting, Prometheus, and Grafana
+## Phase 7 — Helm as Desired-State Source
 
-**Objective:** validate both Azure-native logs/alerts and Kubernetes metrics.
-**Current state:** Terraform declares monitoring/alerts but nothing is locally proven; monitoring stack is not installed.
-**Required changes:** install `kube-prometheus-stack` with Helm into `monitoring`; no Terraform expansion.
-**Files affected:** operational docs, validation, screenshot checklist, status.
-**Commands/actions:** wait for Container Insights ingestion; run schema-appropriate KQL over the actual configured tables; inspect the three alert rules/action group; create a safe disposable crash-loop only if it satisfies an actual query; delete test afterward; install/verify stack; port-forward Grafana and generate application traffic.
-**Expected result:** data reaches Log Analytics, queries return current cluster/workload data, at least one real alert fires and notifies, and Grafana Kubernetes dashboards populate.
-**Validation:** timestamped query/alert/notification and healthy Prometheus/Grafana pods.
-**Rollback/recovery:** delete disposable crash-test pod; Helm uninstall monitoring only as documented cleanup.
-**Dependencies:** deployed AKS/Log Analytics/alerts, alert email confirmation, Azure portal/API access.
-**Human action required?:** yes — confirm Action Group email and capture/confirm notification.
+- **Objective:** retain Git/Helm values as the only image source.
+- **Current state:** complete locally: `values.yaml` contains the only image repository/tag values and has a safe bootstrap placeholder.
+- **Required changes:** replace only `image.repository` with the Terraform `acr_login_server/azure-webapp` after apply; CI continues to change only `image.tag`.
+- **Files affected:** `helm/azure-webapp/values.yaml`, status/validation docs.
+- **Commands/actions:** edit the repository value after collecting outputs; run `helm lint` and `helm template`.
+- **Expected result:** no `latest` deployment tag and no conflicting image setting.
+- **Validation:** render uses the real ACR and an immutable tag.
+- **Rollback/recovery:** return `image.tag` to a known-good SHA through Git.
+- **Dependencies:** Phase 5 outputs.
+- **Human action required?:** no.
 
-## Phase 9 — Evidence, Final Documentation, Resume, and Cleanup Plan
+## Phase 8 — Argo CD Application Configuration
 
-**Objective:** publish only evidence-backed project documentation and a practical handoff.
-**Current state:** inherited screenshots and README claims cannot serve as validation.
-**Required changes:** create screenshot checklist, rewrite README after tests, fill validation matrix, write resume and interview materials, document cleanup without executing destruction.
-**Files affected:** `docs/screenshots/README.md`, README, `docs/RESUME.md`, `docs/INTERVIEW-PREP.md`, `docs/codex/*`, relevant phase docs.
-**Commands/actions:** final Terraform/Kubernetes/CI/GitOps/monitoring validation suite; secret scan before commits; prepare explicit cleanup commands.
-**Expected result:** claims match evidence, user can present/resume the project, and a later destroy is safe to review.
-**Validation:** validation matrix has observed facts, not assumptions; no secrets tracked.
-**Rollback/recovery:** documentation can be corrected; `terraform destroy` requires explicit user approval only after evidence capture.
-**Dependencies:** all applicable earlier validation.
-**Human action required?:** yes for screenshots and any optional cleanup authorization.
+- **Objective:** keep Argo correctly pointed at the fork/chart with automated sync.
+- **Current state:** complete locally; repo URL, path, revision, prune, and self-heal are correct; image overrides are removed.
+- **Required changes:** none unless the remote URL/default branch changes.
+- **Files affected:** `argocd/azure-webapp-application.yaml`, final docs.
+- **Commands/actions:** YAML/render review before applying the Application.
+- **Expected result:** Argo reads the Helm values from the fork.
+- **Validation:** later Application is `Synced` and `Healthy`.
+- **Rollback/recovery:** use a Git revert or delete the Application only during documented cleanup.
+- **Dependencies:** Phase 7 and an accessible AKS cluster.
+- **Human action required?:** no.
+
+## Phase 9 — GitHub Actions CI to GitOps Promotion
+
+- **Objective:** publish an immutable image then commit the desired tag rather than deploy directly.
+- **Current state:** complete locally but the five commits must be pushed before GitHub/Argo can observe them.
+- **Required changes:** push the reviewed local commits; configure external variables/secrets in Phase 6.
+- **Files affected:** `.github/workflows/deploy-aks.yml`, Helm values during a real promotion, GitHub configuration.
+- **Commands/actions:** secret-scan, push, trigger an app change, inspect the exact GitOps diff and commit.
+- **Expected result:** checkout → OIDC → ACR build/push → exact `image.tag` update → bot commit/push; no AKS control step.
+- **Validation:** workflow run, ACR tag, one promotion commit, and later Argo rollout correlate to the source SHA.
+- **Rollback/recovery:** commit a known-good tag and let Argo reconcile.
+- **Dependencies:** Phases 5–7 and GitHub write permission.
+- **Human action required?:** no after external OIDC setup.
+
+## Phase 10 — Remove CI Direct AKS Control
+
+- **Objective:** ensure CI never owns routine Kubernetes deployment.
+- **Current state:** complete locally; no AKS variables, credentials, `kubectl`, Helm upgrade, or Argo sync command remain in the workflow.
+- **Required changes:** none.
+- **Files affected:** final documentation/decisions only.
+- **Commands/actions:** source search and workflow review.
+- **Expected result:** clear CI/Argo ownership boundary.
+- **Validation:** source scan and real workflow behavior.
+- **Rollback/recovery:** not applicable; do not reintroduce direct CI deployment.
+- **Dependencies:** Phase 9.
+- **Human action required?:** no.
+
+## Phase 11 — Retire Raw Manifests
+
+- **Objective:** keep one active application deployment model.
+- **Current state:** complete locally; `k8s/` was removed after Helm renders one equivalent Deployment and Service.
+- **Required changes:** remove stale raw-manifest instructions during final docs work.
+- **Files affected:** inherited README/phase documents.
+- **Commands/actions:** repository-wide reference search.
+- **Expected result:** Helm + Argo CD is the only documented active model.
+- **Validation:** no active raw-manifest paths/commands remain.
+- **Rollback/recovery:** recover historical files from Git only if necessary; do not activate them.
+- **Dependencies:** Phase 7.
+- **Human action required?:** no.
+
+## Phase 12 — Install Argo CD
+
+- **Objective:** install Argo CD using Helm in namespace `argocd`.
+- **Current state:** not started; only the Application manifest is stored.
+- **Required changes:** Helm release and live-tracking documentation only; do not Terraform-manage Argo.
+- **Files affected:** cluster state and tracking docs.
+- **Commands/actions:** follow current official Argo Helm instructions and wait for core pods. Do not apply the Application until Phase 13 produces a real ACR SHA tag in Git; the bootstrap image does not exist.
+- **Expected result:** Argo core components are healthy and ready to reconcile the Application.
+- **Validation:** `kubectl get pods -n argocd`.
+- **Rollback/recovery:** Helm uninstall only in the approved cleanup sequence.
+- **Dependencies:** Phases 5, 7, 8, and a pushed public fork.
+- **Human action required?:** no.
+
+## Phase 13 — First End-to-End Delivery Test
+
+- **Objective:** prove one harmless app change reaches AKS through CI → Git → Argo.
+- **Current state:** not started.
+- **Required changes:** a harmless visible app edit and resulting GitOps promotion commit.
+- **Files affected:** `app/index.html`, Helm `image.tag`, evidence/status docs.
+- **Commands/actions:** push an app change to create the first image/promotion commit; verify the SHA tag exists; only then apply `argocd/azure-webapp-application.yaml`. Collect source SHA, image tag/digest, GitOps SHA, Argo revision, ReplicaSet/deployment revision, and response.
+- **Expected result:** an immutable image is built/pushed, desired state commits, then Argo deploys a known-existing image and new pods serve the change.
+- **Validation:** GitHub run, `az acr repository show-tags`, kubectl rollout, Argo health, HTTP response.
+- **Rollback/recovery:** use Git to promote a known-good tag.
+- **Dependencies:** Phases 6, 9, 12.
+- **Human action required?:** no.
+
+## Phase 14 — GitOps Drift Test
+
+- **Objective:** prove Argo self-heal restores desired replicas.
+- **Current state:** not started.
+- **Required changes:** no Git configuration change; temporary live scale only.
+- **Files affected:** cluster state during test and validation docs.
+- **Commands/actions:** record desired count, `kubectl scale deployment azure-webapp --replicas=4`, observe restoration without editing Git.
+- **Expected result:** Application becomes out of sync briefly and returns to desired replicas.
+- **Validation:** timestamped deployment watch and Argo status.
+- **Rollback/recovery:** Argo self-heal; manually restore only if reconciliation demonstrably fails.
+- **Dependencies:** Phase 12.
+- **Human action required?:** no.
+
+## Phase 15 — Azure Container Insights
+
+- **Objective:** confirm AKS telemetry reaches its Log Analytics workspace.
+- **Current state:** Terraform declares it; no cluster exists.
+- **Required changes:** none unless actual apply/ingestion reveals a documented compatibility problem.
+- **Files affected:** validation/status docs.
+- **Commands/actions:** inspect AKS monitoring profile, wait for ingestion, inspect node/controller/container/pod data.
+- **Expected result:** current cluster inventory is available in Log Analytics.
+- **Validation:** timestamped query results using the deployed workspace.
+- **Rollback/recovery:** diagnose the existing monitoring configuration; do not replace it with another stack.
+- **Dependencies:** Phase 5 and ingestion delay.
+- **Human action required?:** no.
+
+## Phase 16 — Log Analytics / KQL
+
+- **Objective:** run schema-appropriate queries over the actual telemetry.
+- **Current state:** current docs confirm `KubeNodeInventory.Status`, `KubePodInventory.ContainerStatusReason`, and `ContainerRestartCount`; data is unverified.
+- **Required changes:** none before data exists.
+- **Files affected:** validation/docs only.
+- **Commands/actions:** query recent pods/nodes and review actual schema before calling any test successful.
+- **Expected result:** meaningful workload/cluster queries return records.
+- **Validation:** saved query text and redacted result evidence.
+- **Rollback/recovery:** adjust only query documentation if the deployed schema differs.
+- **Dependencies:** Phase 15.
+- **Human action required?:** no.
+
+## Phase 17 — Azure Monitor Alert Rules
+
+- **Objective:** verify the three Terraform-created rules and their Action Group.
+- **Current state:** improved KQL is pending Phase 3; no Azure resources exist.
+- **Required changes:** none beyond Terraform correction/apply.
+- **Files affected:** `modules/alerts/main.tf`, tracking/docs.
+- **Commands/actions:** inspect alert names, queries, frequencies, windows, thresholds, action group, and enabled state.
+- **Expected result:** Node Not Ready, failed/CrashLoop, and recent-restart alerts are live.
+- **Validation:** Azure CLI/API/portal rule inspection.
+- **Rollback/recovery:** correct Terraform query/configuration, not portal drift.
+- **Dependencies:** Phases 3, 5, 15.
+- **Human action required?:** no.
+
+## Phase 18 — Controlled Alert Test
+
+- **Objective:** cause one safe, reversible alert that matches a real rule.
+- **Current state:** not started.
+- **Required changes:** temporary disposable failed pod only after KQL results are visible.
+- **Files affected:** transient cluster object and validation docs.
+- **Commands/actions:** create a `restartPolicy: Never` busybox failure (or an equivalent minimal resource proven to satisfy the deployed query), record timestamps through ingestion/alert/email, then delete it.
+- **Expected result:** a failed pod appears in Log Analytics, alert fires, and Action Group notification arrives.
+- **Validation:** query match, fired alert record, and recipient confirmation.
+- **Rollback/recovery:** delete the test pod promptly; never break a node.
+- **Dependencies:** Phases 15–17 and alert recipient confirmation.
+- **Human action required?:** **yes — confirm receipt of the notification.**
+
+## Phase 19 — Prometheus and Grafana
+
+- **Objective:** validate Kubernetes infrastructure metrics alongside Azure-native observability.
+- **Current state:** not started; no stack is declared in Terraform.
+- **Required changes:** Helm-install `kube-prometheus-stack` in `monitoring`; no Ingress/TLS/custom dashboards.
+- **Files affected:** cluster Helm release and tracking docs.
+- **Commands/actions:** add/update chart repository, install, wait for pods, port-forward Grafana, generate modest application traffic, review supplied Kubernetes dashboards.
+- **Expected result:** Prometheus targets/metrics and populated Grafana cluster/node/namespace/pod views.
+- **Validation:** healthy pods/release, targets, dashboard observations.
+- **Rollback/recovery:** Helm uninstall only in documented cleanup.
+- **Dependencies:** Phase 5.
+- **Human action required?:** no.
+
+## Phase 20 — Screenshot/Evidence Plan
+
+- **Objective:** specify fresh evidence without presenting inherited images as this environment's proof.
+- **Current state:** not started; inherited assets are unverified.
+- **Required changes:** create `docs/screenshots/README.md` with the 13 requested capture items and redaction guidance.
+- **Files affected:** screenshot checklist and validation docs.
+- **Commands/actions:** create checklist after live tests; owner captures actual portal/terminal/UI screens.
+- **Expected result:** screenshots correspond to observed validation.
+- **Validation:** checklist maps each filename to required visible proof.
+- **Rollback/recovery:** remove incorrectly attributed evidence references.
+- **Dependencies:** Phases 5–19 as applicable.
+- **Human action required?:** **yes — capture/share fresh screenshots.**
+
+## Phase 21 — Final README Rewrite
+
+- **Objective:** make the README accurately describe this DevOps project and actual evidence.
+- **Current state:** deferred; current README is inherited/stale.
+- **Required changes:** rewrite all required sections, include Mermaid architecture, deployment/cleanup instructions, limitations, and upstream credit; remove platform framing, false evidence, direct deployment, excluded-tech roadmap, and the stale PNG architecture reference.
+- **Files affected:** `README.md`, possibly `docs/phases/*`.
+- **Commands/actions:** reconcile each claim with the validation matrix.
+- **Expected result:** README matches the implemented and tested system.
+- **Validation:** evidence audit and stale-marker search.
+- **Rollback/recovery:** correct prose; do not claim untested features.
+- **Dependencies:** major validation complete.
+- **Human action required?:** no.
+
+## Phase 22 — Final Validation Suite
+
+- **Objective:** run all Terraform, Kubernetes, CI/CD, GitOps, Azure monitoring, and Grafana checks together.
+- **Current state:** only local static checks have passed.
+- **Required changes:** none unless validation finds a specific defect.
+- **Files affected:** validation/status/handoff docs.
+- **Commands/actions:** `terraform fmt -check`, `validate`, drift-free plan; node/app/Argo checks; CI lineage; alert/notification and Grafana proof.
+- **Expected result:** the project meets the plan's evidence-backed definition of done.
+- **Validation:** complete matrix with pass/block/fail and evidence.
+- **Rollback/recovery:** fix root causes minimally, rerun affected tests.
+- **Dependencies:** Phases 5–19.
+- **Human action required?:** notification/screenshot confirmation as applicable.
+
+## Phase 23 — Resume Material
+
+- **Objective:** create honest, concise project bullets.
+- **Current state:** not started.
+- **Required changes:** add `docs/RESUME.md` only after relevant tests pass.
+- **Files affected:** `docs/RESUME.md`.
+- **Commands/actions:** derive 3–4 bullets strictly from evidence.
+- **Expected result:** stack line and claims have no invented performance/availability metrics.
+- **Validation:** compare each bullet with validation matrix.
+- **Rollback/recovery:** remove unsupported claims.
+- **Dependencies:** Phase 22.
+- **Human action required?:** no.
+
+## Phase 24 — Interview Handoff
+
+- **Objective:** explain the requested 36 topics from first principles.
+- **Current state:** not started.
+- **Required changes:** add `docs/INTERVIEW-PREP.md` with short answer, detail, repo location, and validation per question.
+- **Files affected:** `docs/INTERVIEW-PREP.md`.
+- **Commands/actions:** derive answers from final design/evidence.
+- **Expected result:** an accurate, auditable interview guide.
+- **Validation:** every answer points to actual repository/configuration/evidence.
+- **Rollback/recovery:** correct unsupported answers.
+- **Dependencies:** Phase 22.
+- **Human action required?:** no.
+
+## Phase 25 — Cleanup Plan
+
+- **Objective:** document safe removal without executing it.
+- **Current state:** not started.
+- **Required changes:** document Argo application removal, monitoring/Argo Helm uninstall, Terraform destroy review, and backend retention/deletion sequence.
+- **Files affected:** final README, cleanup guide, handoff/status docs.
+- **Commands/actions:** list exact targets and confirm all evidence/docs before asking for destruction authorization.
+- **Expected result:** future cleanup is clear, ordered, and cost-aware.
+- **Validation:** no `terraform destroy` occurs without explicit user approval.
+- **Rollback/recovery:** retain backend/state until intentional final deletion.
+- **Dependencies:** Phases 20–24.
+- **Human action required?:** **yes — explicit approval is mandatory before any destruction.**
+
+## Verified Reference Decisions
+
+- AzureRM 4.81.0 accepts `oms_agent.msi_auth_for_monitoring_enabled`; current [AKS resource documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster) lists it as optional.
+- Azure CNI on a custom subnet requires the cluster identity to have Network Contributor at least on that subnet; see [AKS network guidance](https://learn.microsoft.com/azure/aks/concepts-network-legacy-cni).
+- `KubePodInventory` exposes `ContainerStatusReason`, and Microsoft's current crash-loop example tests `ContainerStatus == "waiting"` plus `ContainerStatusReason`; see the [table reference](https://learn.microsoft.com/azure/azure-monitor/reference/tables/kubepodinventory) and [query example](https://learn.microsoft.com/azure/azure-monitor/reference/queries/kubepodinventory/).
+- A GitHub OIDC branch credential uses the GitHub issuer and a branch-ref subject; see [Microsoft Entra workload identity federation guidance](https://learn.microsoft.com/entra/workload-id/workload-identity-federation-create-trust).

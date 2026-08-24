@@ -2,93 +2,97 @@
 
 ## Current Phase
 
-Phase 4 — Azure backend bootstrap and infrastructure provisioning.
+Phase 4 — Azure backend bootstrap and Phase 5 deployment-input preparation.
 
 ## Current Status
 
-Repository audit, implementation planning, and all currently possible local implementation work are complete. No Azure state has been inferred or changed. Azure bootstrap is blocked until Azure CLI is available and the user authenticates.
+Repository audit, source cleanup, and a second Terraform correctness pass are complete locally. Azure CLI and GitHub CLI are authenticated, but no Azure resource has been created or changed. The source has not yet been pushed: local `main` is seven commits ahead of `origin/main`. Terraform plan/apply is deliberately paused for a user-selected Action Group email recipient.
 
 ## Completed
 
-- Audited repository structure, Git remote/branch/status, Terraform root/modules, workflow, Helm chart, Argo Application, application, historical documentation, and requested search terms.
-- Recorded verified upstream/stale configuration and README mismatches in `00-REPO-AUDIT.md`.
-- Created implementation, validation, decision, and handoff tracking documents.
-- Replaced the hardcoded AzureRM backend with an empty backend, added an ignored local-backend pattern, and added safe `backend.hcl.example` and `terraform.tfvars.example` files.
-- Generated `.terraform.lock.hcl` with AzureRM 4.81.0 and Random 3.9.0; it is no longer ignored.
-- Enabled supported managed-identity authentication for the AKS `oms_agent` monitoring configuration.
-- Updated the static page and made Helm values the single image source with a documented, non-deployable bootstrap ACR placeholder.
-- Removed stale Argo image overrides and corrected the Argo source URL to this repository.
-- Converted CI to OIDC-based ACR build/push plus a deterministic GitOps `image.tag` commit; removed AKS variables and credential retrieval.
-- Removed the unused raw `k8s/` manifests after successful Helm lint/render validation.
-- Completed local Terraform formatting/validation and Helm lint/template checks.
+- Audited all implementation files, inherited documentation/evidence, Git state/remotes, Azure inventory/provider state, GitHub configuration names, and requested stale-value markers.
+- Preserved the untracked user brief `plan.md`; no `AGENTS.md` exists in this repository.
+- Completed the earlier local migration: empty AzureRM backend, ignored `backend.hcl`, safe input examples, tracked provider lock, managed-identity Container Insights configuration, `azure-webapp` identity, no raw manifests, Helm-only image source, corrected Argo source/no image overrides, and CI-to-GitOps workflow.
+- Reconciled the audit/implementation plan with the current checkout instead of retaining the historical upstream-starting-state claims.
+- Added subnet-scoped `Network Contributor` for the AKS control-plane system identity and enabled managed-identity role-assignment replication tolerance.
+- Corrected the Azure Monitor KQL rules: node readiness uses `Status !contains "Ready"`; CrashLoop detection uses `ContainerStatusReason`; restart alert evaluates a 15-minute restart delta instead of a cumulative all-time count.
+- Confirmed the safer sequencing: install Argo first, but apply the Application only after CI has committed the first real ACR SHA tag.
+- Documented a dedicated-project kubeconfig requirement so commands never target the existing unrelated GKE context.
 
 ## In Progress
 
-- Await Azure access so the owner-controlled Terraform backend can be created and initialization can target the selected subscription.
+- Commit and secret-scan the current Terraform/documentation corrections, then push all reviewed local commits to the fork before GitHub Actions or Argo CD is configured.
+- Prepare owner-controlled backend/bootstrap commands and deployment inputs without persisting credentials.
 
 ## Blocked
 
-- Azure backend bootstrap, Terraform plan/apply, live AKS/ACR checks, OIDC setup, Argo installation, end-to-end delivery, monitoring, alerting, and Prometheus/Grafana validation are blocked because Azure CLI is not installed and no Azure login/subscription has been verified.
-- GitHub repository settings/secrets/variables and workflow execution cannot be verified because GitHub CLI is not installed and no authenticated GitHub session is available.
+- Terraform plan/apply needs an Action Group recipient. The value is intentionally absent from tracked source and has not been assumed from the signed-in account.
+- Live AKS/ACR/OIDC/Argo/monitoring/alert/Grafana validation necessarily waits for infrastructure and external configuration.
 
 ## Next Action
 
-Install Azure CLI, run `az login`, then tell Codex to continue. The next safe action is `az account show`; the active subscription will be reported without being changed. Also be ready to provide the Action Group alert-email address.
+Provide the email address that should receive Azure Monitor Action Group notifications. Unless directed otherwise, the deployment plan will use the documented example inputs: Central India, `project_name = "aksops"`, `environment = "dev"`, `node_count = 2`, and `node_vm_size = "Standard_D2s_v5"`, subject to quota/availability checks. The actual selected values will remain in ignored `terraform.tfvars`.
 
 ## Azure Resources Created
 
-None created by this implementation session. Existing resources are unknown and unverified.
+- None by this implementation.
+- The active subscription has one pre-existing empty `devops-rg` in Central India; it will not be repurposed automatically.
+- No AKS cluster, ACR, Storage account, or Log Analytics workspace exists in the active subscription.
+- `Microsoft.Storage`, `Microsoft.Network`, `Microsoft.Compute`, `Microsoft.ManagedIdentity`, `Microsoft.ContainerService`, `Microsoft.ContainerRegistry`, `Microsoft.OperationalInsights`, and `Microsoft.Insights` were `NotRegistered` when inspected. Registration is an upcoming required, non-billable subscription change.
 
 ## GitHub Configuration
 
-- Origin-derived repository: `devSatym/azure-aks-gitops-observability`.
-- Required future secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
-- Required future variables: `ACR_NAME`, `ACR_LOGIN_SERVER`, `IMAGE_NAME=azure-webapp`.
+- Repository: `devSatym/azure-aks-gitops-observability` (public, default branch `main`, no branch protection).
+- GitHub CLI is authenticated as the repository administrator.
+- No repository Actions secrets or variables exist yet.
+- Required later secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+- Required later variables: `ACR_NAME`, `ACR_LOGIN_SERVER`, `IMAGE_NAME=azure-webapp`.
 - No client secret is required or intended.
 
 ## Validation Completed
 
-- Terraform CLI present: 1.15.8.
-- Helm CLI present: 3.21.2.
-- kubectl client present: 1.34.1.
-- Docker CLI present: 29.4.0.
-- Azure CLI, GitHub CLI, and `yq` are absent.
-- `terraform init -backend=false`: passed; AzureRM 4.81.0 and Random 3.9.0 were locked locally.
-- `terraform fmt -check -recursive`: passed.
-- `terraform validate`: passed.
-- Workflow YAML parsing and the isolated `image.tag` update logic: passed.
-- `helm lint ./helm/azure-webapp`: passed (informational missing-icon recommendation only).
-- `helm template azure-webapp ./helm/azure-webapp`: passed; renders exactly one Service and one Deployment with two replicas.
-- `docker build --tag azure-webapp:local-validation ./app`: passed; produced a local Linux/amd64 image.
-- Live cloud, cluster, workflow, alert, and dashboard tests: not run.
+| Check | Result |
+| --- | --- |
+| `terraform init -backend=false` | PASS with AzureRM 4.81.0 and Random 3.9.0 |
+| `terraform fmt -check -recursive` | PASS after current Terraform corrections |
+| `terraform validate` | PASS after current Terraform corrections |
+| Helm lint/template | PASS; one Service and one two-replica Deployment render; Helm reports only an optional icon recommendation |
+| Local workflow structure | PASS; OIDC/ACR/GitOps update present, no direct AKS/Helm/Argo deployment command |
+| Azure account / inventory | PASS, read-only; one enabled/default subscription inspected without switch |
+| GitHub repository / configuration inventory | PASS, read-only; administrator access, no secrets/variables |
+| Live Terraform/AKS/ACR/OIDC/Argo/monitoring/Grafana | NOT RUN; infrastructure/configuration does not exist yet |
 
 ## Known Issues
 
-- The chart deliberately contains a bootstrap ACR placeholder. Replace it with the Terraform output's real ACR login server once infrastructure exists; CI then changes only `image.tag`.
-- README and historical phase docs still overstate validation and describe direct deployment paths. They are intentionally deferred for the evidence-backed final-documentation phase.
-- Terraform plan/apply requires an owner-created backend and local tfvars; neither has been created.
+- `helm/azure-webapp/values.yaml` deliberately uses a non-deployable bootstrap ACR repository/tag. Replace the repository after Terraform outputs it, and do not apply the Argo Application until a real SHA tag is present in Git.
+- The current default kubeconfig points to a GKE production-named context and is unreachable. It must not be used for this project; use a dedicated, ignored project kubeconfig after AKS exists.
+- README, phase guides, architecture PNG, and screenshots are inherited/stale and must not be treated as evidence. They are deferred until validation is observed.
+- Role-assignment propagation may delay AKS networking/ACR access after apply; wait/verify rather than adding broad permissions.
 
 ## Important Commands
 
 ```bash
+# Local checks
 terraform init -backend=false
 terraform fmt -check -recursive
 terraform validate
 helm lint ./helm/azure-webapp
 helm template azure-webapp ./helm/azure-webapp
 
-# Required before Azure bootstrap:
-az login
+# Read-only account check
 az account show
+
+# After bootstrap / with explicit project kubeconfig only
+terraform init -reconfigure -backend-config=backend.hcl
+az aks get-credentials --resource-group <rg> --name <aks> --file <project-kubeconfig>
+kubectl --kubeconfig <project-kubeconfig> get nodes
 ```
 
 ## Local Commits
 
-- `26aa55e` — `infra: make terraform backend and monitoring auth configurable`
-- `72f0869` — `refactor: make helm values the deployment source of truth`
-- `da509a2` — `ci: implement ACR to GitOps image promotion`
-- `672fb67` — `docs: add repository audit and implementation plan`
+- Earlier local-only commits: `26aa55e`, `72f0869`, `da509a2`, `672fb67`, `7d433fe`.
+- Current completion set: `1e5211e` (AKS network/alert corrections) and the documentation reconciliation recorded with this status update.
 
 ## Last Updated
 
-2026-08-23, Asia/Kolkata — local implementation and validation committed; awaiting Azure CLI login.
+2026-08-24, Asia/Kolkata — completed current audit/correctness pass; awaiting alert-recipient input before a real plan/apply.

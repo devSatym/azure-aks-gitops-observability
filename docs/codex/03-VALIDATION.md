@@ -1,30 +1,37 @@
 # Validation Matrix
 
-Only commands and outcomes observed in this environment receive `PASS`.
+Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED` means a prerequisite has not yet been met; it is not a successful result.
 
 | Test | Expected | Actual | Status | Evidence |
 | --- | --- | --- | --- | --- |
-| Repository audit | All implementation areas inspected before changes | Completed on 2026-08-23 | PASS | `00-REPO-AUDIT.md` |
-| Terraform CLI | Compatible local Terraform available | Terraform 1.15.8 installed | PASS | command output recorded in project status |
-| Helm CLI | Helm available for chart checks | Helm 3.21.2 installed | PASS | command output recorded in project status |
-| Terraform fmt | No formatting changes required | `terraform fmt -check -recursive` succeeded | PASS | command output, 2026-08-23 |
-| Terraform init, backend disabled | Provider initialization succeeds | `terraform init -backend=false` installed AzureRM 4.81.0 and Random 3.9.0 | PASS | `.terraform.lock.hcl` |
-| Terraform validate | Configuration validates | `terraform validate` succeeded | PASS | command output, 2026-08-23 |
-| Terraform plan/apply | Expected infrastructure created | Not run; Azure CLI unavailable | BLOCKED | `02-PROJECT-STATUS.md` |
-| ACR | Registry exists and is available | Not run | BLOCKED | Azure access required |
-| AKS / ACR pull | Nodes Ready and kubelet can pull | Not run | BLOCKED | Azure access required |
-| GitHub OIDC | Passwordless Azure login succeeds | Not run | BLOCKED | Entra/GitHub configuration required |
-| Docker build | Application image builds | `docker build --tag azure-webapp:local-validation ./app` succeeded | PASS | local image inspection, 2026-08-23 |
-| ACR SHA image | Immutable SHA image exists in ACR | Not run | BLOCKED | ACR/OIDC required |
-| GitOps workflow structure | CI has OIDC + ACR push + deterministic `image.tag` update; no AKS deployment command | YAML parser and isolated update script passed; no direct deploy command found in CI source | PASS | `.github/workflows/deploy-aks.yml` |
-| GitOps commit | CI changes only Helm `image.tag` in a real GitHub run | Not run | BLOCKED | workflow/GitHub access required |
-| Helm chart | Lint/render succeeds | `helm lint` passed; `helm template` rendered one Service and one two-replica Deployment | PASS | command output, 2026-08-23 |
-| Argo CD | Application Synced and Healthy | Not run | BLOCKED | AKS/Argo required |
-| Application | LoadBalancer responds | Not run | BLOCKED | AKS required |
-| Drift correction | Argo restores desired replicas | Not run | BLOCKED | AKS/Argo required |
-| Container Insights | Cluster/workload telemetry appears | Not run | BLOCKED | deployed AKS and ingestion wait required |
-| KQL | Query returns actual data | Not run | BLOCKED | Log Analytics required |
-| Azure Monitor rules | Three configured rules/action group exist | Not run | BLOCKED | Terraform apply required |
-| Fired alert / email | Controlled failure fires and notifies | Not run | BLOCKED | data ingestion and alert email required |
+| Repository audit | All implementation areas inspected before changes | Current source, docs, Git, Azure inventory, and GitHub configuration audited on 2026-08-24 | PASS | `00-REPO-AUDIT.md` |
+| Terraform CLI and lock | Compatible Terraform and repeatable provider versions | Terraform 1.15.8; AzureRM 4.81.0 and Random 3.9.0 pinned | PASS | `.terraform.lock.hcl`, command output |
+| Terraform backend-disabled init | Providers/modules initialize without remote state | `terraform init -backend=false` succeeds | PASS | command output, 2026-08-24 |
+| Terraform formatting | Terraform has canonical formatting | `terraform fmt -check -recursive` succeeds after current corrections | PASS | command output, 2026-08-24 |
+| Terraform validation | Configuration/provider schema is valid | `terraform validate` succeeds after network-role and alert corrections | PASS | command output, 2026-08-24 |
+| Monitoring MSI configuration | Pinned provider accepts managed-identity OMS setting | Configuration validates; current AzureRM docs list the setting | PASS | `modules/aks/main.tf`, `04-DECISIONS.md` |
+| AKS custom-network role design | Control-plane identity has least-privilege subnet access | Terraform declares subnet-scoped `Network Contributor`; live role not created yet | PASS (static) | `main.tf`, `modules/aks/outputs.tf` |
+| Alert query semantics | CrashLoop/restart query matches current table semantics | Query uses `ContainerStatusReason` and 15-minute restart delta; no live data yet | PASS (static) | `modules/alerts/main.tf`, `04-DECISIONS.md` |
+| Helm chart | Lint/render succeeds | Helm 3.21.2 lint passes; template renders one Service and one two-replica Deployment | PASS | command output, 2026-08-24 |
+| Docker build | Application image builds locally | Passed in the prior local validation recorded 2026-08-23; no source change since | PASS | `02-PROJECT-STATUS.md` historical command record |
+| GitOps workflow structure | OIDC + ACR push + deterministic one-field update; no direct cluster deploy | Source review confirms expected permissions/steps and no AKS/Helm/Argo deploy command | PASS (static) | `.github/workflows/deploy-aks.yml` |
+| Remote source parity | Fork sees current local migration | Local `main` remains ahead of `origin/main`; push pending | NOT RUN | `02-PROJECT-STATUS.md` |
+| Azure account inventory | Active subscription is inspected without a switch | One enabled/default subscription inspected; project resources absent | PASS | Azure CLI output, 2026-08-24 |
+| Azure provider registration | Required resource providers available | Required namespaces are currently `NotRegistered` | NOT RUN | `02-PROJECT-STATUS.md` |
+| Terraform remote backend | Owner-controlled Entra-authenticated Azure Storage state works | Not created | BLOCKED | alert-recipient/deployment preparation pending |
+| Terraform plan/apply | Expected infrastructure created without unexpected destroys | Not run | BLOCKED | backend, inputs, provider registration pending |
+| ACR | Registry exists; admin disabled; image tag is present | Not run | BLOCKED | Terraform/OIDC required |
+| AKS / ACR pull | Nodes Ready and workload can pull image | Not run | BLOCKED | Terraform/OIDC/GitOps required |
+| Isolated kubectl access | Project commands target only the new AKS cluster | Not run; default context is intentionally unsafe/unrelated | BLOCKED | ADR-013 |
+| GitHub OIDC | Passwordless Azure login succeeds | No Entra federation/secrets configured | BLOCKED | Azure/GitHub configuration required |
+| GitOps commit | CI changes only Helm `image.tag` in a real run | Not run | BLOCKED | OIDC/ACR configuration required |
+| Argo CD | Core pods healthy; Application Synced and Healthy | Not installed; Application intentionally deferred until a real tag exists | BLOCKED | AKS/first CI tag required |
+| Application | LoadBalancer responds to intended page | Not run | BLOCKED | Argo/app rollout required |
+| Drift correction | Argo restores desired replicas | Not run | BLOCKED | Argo required |
+| Container Insights | Cluster/workload telemetry appears | Not run | BLOCKED | AKS/ingestion required |
+| KQL | Current schema query returns actual records | Not run | BLOCKED | Log Analytics ingestion required |
+| Azure Monitor rules | Three rules and Action Group exist | Not run | BLOCKED | Terraform apply required |
+| Fired alert / email | Controlled failed pod fires and notifies | Not run | BLOCKED | telemetry/rules/recipient confirmation required |
 | Prometheus / Grafana | Stack healthy and dashboard populated | Not run | BLOCKED | AKS required |
-| Secret hygiene | No local secret/state/backend configuration tracked | Pending final pre-commit scan | NOT RUN | — |
+| Screenshot evidence | Fresh screenshots map to observed tests | Not run | BLOCKED | live validation and owner capture required |
+| Secret hygiene | No secret/state/local backend config is tracked | Final scan pending commit/push | NOT RUN | — |

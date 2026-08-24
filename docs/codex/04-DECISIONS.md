@@ -44,10 +44,10 @@
 
 ## ADR-007 — Retire raw manifests
 
-**Status:** accepted pending Helm lint/render.
+**Status:** accepted and implemented locally.
 **Context:** unreferenced raw manifests duplicate the Deployment/Service and include stale ACR and `latest` values.
 **Decision:** delete `k8s/` after local chart equivalence validates, rather than preserve a competing deployment path.
-**Consequences:** the README and operational guidance present exactly one active application deployment model: Helm controlled by Argo CD.
+**Consequences:** `k8s/` was removed after Helm lint/template passed. The final README and operational guidance must present exactly one active application deployment model: Helm controlled by Argo CD.
 
 ## ADR-008 — Keep scope intentionally narrow
 
@@ -61,3 +61,31 @@
 **Context:** the current AKS module uses `oms_agent`. Terraform initialization locked AzureRM to 4.81.0. HashiCorp's resource documentation for that version documents `msi_auth_for_monitoring_enabled` in the `oms_agent` block.
 **Decision:** set `msi_auth_for_monitoring_enabled = true` alongside the existing Log Analytics workspace ID.
 **Consequences:** Container Insights monitoring is configured to use managed-identity authentication; apply-time behavior remains to be validated in the target subscription.
+
+## ADR-010 — AKS control-plane identity receives subnet-scoped network access
+
+**Status:** accepted.
+**Context:** the AKS cluster uses Azure CNI with a Terraform-created custom subnet. Current AKS guidance requires the cluster identity to have at least Network Contributor on that subnet. A system-assigned identity cannot receive that role until after the cluster exists.
+**Decision:** keep the existing system-assigned control-plane identity and create a Terraform-managed `Network Contributor` assignment at the AKS subnet scope immediately after cluster creation. Keep the separate kubelet `AcrPull` assignment at the ACR scope. Both managed-identity assignments use `skip_service_principal_aad_check` to avoid directory-replication checks during apply.
+**Consequences:** the design remains minimal and least-privilege. RBAC propagation can take time after apply, so cluster/load-balancer verification must wait for effective permissions rather than adding broad roles or changing to a service principal.
+
+## ADR-011 — Alerts use current Container Insights status semantics
+
+**Status:** accepted.
+**Context:** current `KubePodInventory` uses `ContainerStatus` for a container state such as `waiting` and `ContainerStatusReason` for `CrashLoopBackOff` or `Error`. Its restart counter is cumulative.
+**Decision:** detect crash loops through `ContainerStatus == "waiting"` and `ContainerStatusReason`, retain failed pods as a separate condition, and alert on a restart-count delta within the rule's 15-minute window rather than an all-time maximum.
+**Consequences:** a disposable failed pod can be used for a controlled alert test, and a historical restart count does not leave an alert perpetually true. Actual telemetry/table behavior still requires live validation.
+
+## ADR-012 — Do not apply the Application before the first real image exists
+
+**Status:** accepted.
+**Context:** the chart's bootstrap image is intentionally nonexistent and CI publishes only SHA tags. Applying the Argo Application beforehand would produce `ImagePullBackOff` and fail a first-health check for a known reason.
+**Decision:** install Argo CD first, then produce and commit the first real ACR SHA tag through CI, then apply the Application manifest.
+**Consequences:** first synchronization begins from a deployable desired state while preserving the CI → Git → Argo ownership model.
+
+## ADR-013 — Isolate this project's kubectl access
+
+**Status:** accepted.
+**Context:** the current default kubeconfig points to an unreachable external GKE production-named context, not this Azure project.
+**Decision:** after AKS provisioning, obtain credentials into a dedicated project kubeconfig file and invoke kubectl/Helm with that explicit configuration. Do not overwrite or use the existing default context.
+**Consequences:** no project validation command can accidentally target an unrelated cluster. The dedicated local kubeconfig remains untracked and must never be committed.
