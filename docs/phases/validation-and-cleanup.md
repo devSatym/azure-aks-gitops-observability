@@ -1,4 +1,7 @@
-Platform Validation and Cleanup
+# Platform Validation and Cleanup
+
+> Historical runbook. Review the current validation and cleanup guidance before making any write or deletion. The application is Argo CD-owned, so it must not be deployed, upgraded, rolled back, or uninstalled as a direct Helm release. Set `PROJECT_KUBECONFIG` to a dedicated AKS kubeconfig before using any Kubernetes command below.
+
 Objective
 
 This guide contains the commands used to validate the complete AKS platform and safely remove the resources when they are no longer required.
@@ -24,7 +27,7 @@ az acr show \
   --name <acr-name> \
   --output table
 2. AKS Node Validation
-kubectl get nodes
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get nodes
 
 Expected state:
 
@@ -32,12 +35,12 @@ STATUS: Ready
 
 View additional node details:
 
-kubectl get nodes -o wide
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get nodes -o wide
 3. Kubernetes Workload Validation
-kubectl get deployments
-kubectl get pods
-kubectl get svc
-kubectl rollout status deployment/azure-webapp
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get deployments
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get pods
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get svc
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" rollout status deployment/azure-webapp
 
 These commands validate that:
 
@@ -50,36 +53,36 @@ The application rollout completed successfully
 
 Describe the Pod:
 
-kubectl describe pod <pod-name>
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" describe pod <pod-name>
 
 View logs:
 
-kubectl logs <pod-name>
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" logs <pod-name>
 
 View recent Kubernetes events:
 
-kubectl get events \
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get events \
   --sort-by=.metadata.creationTimestamp
 5. Self-Healing Validation
 
-Delete an application Pod:
+For a controlled, approved non-production test only, delete an application Pod:
 
-kubectl delete pod <pod-name>
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" delete pod <pod-name>
 
 Check the Pods again:
 
-kubectl get pods
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get pods
 
 The Deployment controller should automatically create a replacement Pod.
 
 This validates Kubernetes self-healing at the workload level.
 
 6. Rollout Validation
-kubectl rollout status deployment/azure-webapp
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" rollout status deployment/azure-webapp
 
 View rollout history:
 
-kubectl rollout history deployment/azure-webapp
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" rollout history deployment/azure-webapp
 7. Azure Container Registry Validation
 
 List repositories:
@@ -94,21 +97,9 @@ az acr repository show-tags \
   --name <acr-name> \
   --repository azure-webapp \
   --output table
-8. Helm Validation
+8. Helm Chart Validation
 
-List Helm releases:
-
-helm list
-
-Check the application release:
-
-helm status azure-webapp
-
-View release history:
-
-helm history azure-webapp
-
-Validate the chart:
+The application does not have a directly operated Helm release: Argo CD renders and reconciles the chart. Validate the chart without deploying it:
 
 helm lint ./helm/azure-webapp
 
@@ -119,15 +110,15 @@ helm template azure-webapp ./helm/azure-webapp
 
 Check Argo CD Pods:
 
-kubectl get pods -n argocd
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get pods -n argocd
 
 List Argo CD applications:
 
-kubectl get applications -n argocd
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get applications -n argocd
 
 Inspect the application:
 
-kubectl get application azure-webapp -n argocd
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get application azure-webapp -n argocd
 
 Expected state:
 
@@ -137,17 +128,17 @@ Health Status: Healthy
 
 Check Kubernetes system and workload Pods:
 
-kubectl get pods --all-namespaces
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get pods --all-namespaces
 
 Check the monitoring namespace:
 
-kubectl get pods -n monitoring
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get pods -n monitoring
 
 Check the Prometheus Helm release:
 
-helm list -n monitoring
+helm list -n monitoring --kubeconfig "$PROJECT_KUBECONFIG"
 11. Grafana Access
-kubectl port-forward \
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" port-forward \
   svc/kube-prometheus-stack-grafana \
   3000:80 \
   -n monitoring
@@ -157,13 +148,13 @@ Open:
 http://localhost:3000
 12. Argo CD Drift Test
 
-Change the Deployment directly:
+In a controlled, approved non-production test, change the Deployment directly:
 
-kubectl scale deployment azure-webapp --replicas=3
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" scale deployment azure-webapp --replicas=3
 
 Check the Deployment:
 
-kubectl get deployment azure-webapp
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get deployment azure-webapp
 
 When Argo CD self-healing is enabled, it should return the Deployment to the replica count defined in Git.
 
@@ -171,31 +162,38 @@ When Argo CD self-healing is enabled, it should return the Deployment to the rep
 
 Retrieve the Service external IP:
 
-kubectl get svc azure-webapp-service
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" get svc azure-webapp-service
 
 Open the external IP in a browser.
 
 Cleanup
-Remove the Application Helm Release
 
-Only run this when Helm directly owns the release:
+> Destructive operations: do not run any command in this section without explicit approval, a reviewed target, and retained evidence/state as required.
 
-helm uninstall azure-webapp
+Remove the Argo CD application first. Prefer a reviewed Git change that removes or disables the `Application`; if deleting it directly, first confirm the intended cascading-resource behavior:
 
-When Argo CD owns the release, delete or disable the Argo CD application first.
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" delete application azure-webapp -n argocd
 
-Remove Prometheus and Grafana
-helm uninstall kube-prometheus-stack -n monitoring
-kubectl delete namespace monitoring
-Remove Argo CD
-kubectl delete namespace argocd
+Remove Prometheus and Grafana:
+
+helm uninstall kube-prometheus-stack --namespace monitoring --kubeconfig "$PROJECT_KUBECONFIG"
+
+Remove Argo CD:
+
+Identify the installed release first, then uninstall that reviewed release:
+
+helm list --namespace argocd --kubeconfig "$PROJECT_KUBECONFIG"
+helm uninstall <argo-cd-release> --namespace argocd --kubeconfig "$PROJECT_KUBECONFIG"
+
 Destroy Azure Infrastructure
 
 Run from the Terraform root directory:
 
 terraform destroy
 
-Review the destruction plan before confirming.
+Review the destruction plan before confirming. Do not run it without explicit approval.
+
+Retain the remote Terraform backend until the destroy outcome and required audit records are verified. Delete the backend storage only when its retained state is no longer needed.
 
 Cost-Control Recommendation
 
@@ -205,8 +203,8 @@ For learning environments:
 
 Capture the required screenshots and validation evidence.
 Confirm that all configuration is committed to Git.
-Run terraform destroy.
+Run `terraform destroy` only after explicit approval.
 Recreate the environment later using terraform apply.
 Outcome
 
-These checks validate the infrastructure, application, CI, Helm, monitoring and GitOps layers before the environment is removed.
+Use these checks as a historical reference. The current evidence record, GitOps ownership model, and approved cleanup plan determine what is actually safe to validate or remove.

@@ -1,4 +1,7 @@
-Phase 7 — Argo CD GitOps
+# Phase 7 — Argo CD GitOps
+
+> Historical phase note: this is the supported application ownership model. Make application changes in Git; do not use direct Helm or raw-manifest deployment commands. Refer to `docs/codex/03-VALIDATION.md` for the observed application status and drift-test evidence.
+
 Objective
 
 The objective of this phase was to implement GitOps-based Kubernetes deployment using Argo CD.
@@ -84,38 +87,38 @@ Validation
 
 Check Argo CD Pods:
 
-kubectl get pods -n argocd
+kubectl --kubeconfig <project-kubeconfig> get pods -n argocd
 
 List Argo CD applications:
 
-kubectl get applications -n argocd
+kubectl --kubeconfig <project-kubeconfig> get applications -n argocd
 
 Inspect the application:
 
-kubectl get application azure-webapp -n argocd
+kubectl --kubeconfig <project-kubeconfig> get application azure-webapp -n argocd
 
 Describe the application:
 
-kubectl describe application azure-webapp -n argocd
+kubectl --kubeconfig <project-kubeconfig> describe application azure-webapp -n argocd
 
 Validate the application Deployment:
 
-kubectl get deployment azure-webapp
+kubectl --kubeconfig <project-kubeconfig> get deployment azure-webapp
 
 Validate the application Pods:
 
-kubectl get pods
+kubectl --kubeconfig <project-kubeconfig> get pods
 Drift Reconciliation Test
 
-A simple reconciliation test can be performed by manually changing the Deployment replica count:
+A controlled reconciliation test in an approved non-production environment can temporarily change the Deployment replica count:
 
-kubectl scale deployment azure-webapp --replicas=3
+kubectl --kubeconfig <project-kubeconfig> scale deployment azure-webapp --replicas=3
 
 When self-healing is enabled, Argo CD should return the Deployment to the replica count defined in Git.
 
 Validate:
 
-kubectl get deployment azure-webapp
+kubectl --kubeconfig <project-kubeconfig> get deployment azure-webapp
 Evidence
 
 
@@ -126,4 +129,4 @@ Evidence
 
 Outcome
 
-This phase implemented Git-driven Kubernetes deployment, automated synchronisation and configuration drift reconciliation.
+This phase documents the GitOps operating model. Confirm the live sync, health, and self-healing results through the current validation record.

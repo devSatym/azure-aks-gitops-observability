@@ -1,4 +1,7 @@
-Phase 4 — Helm Application Packaging
+# Phase 4 — Helm Application Packaging
+
+> Historical phase note: `helm/azure-webapp` is current desired-state source material, but Argo CD owns its reconciliation in AKS. Do not create, upgrade, roll back, or uninstall an `azure-webapp` Helm release directly.
+
 Objective
 
 The objective of this phase was to replace raw Kubernetes manifest files with a reusable Helm chart.
@@ -53,26 +56,7 @@ service.yaml
 
 Creates the Kubernetes Service that exposes the application.
 
-Manual Helm Deployment
-
-Install or upgrade the application:
-
-helm upgrade --install azure-webapp ./helm/azure-webapp \
-  --set image.repository=<acr-login-server>/azure-webapp \
-  --set image.tag=<image-tag>
-Helm Validation
-
-List Helm releases:
-
-helm list
-
-Check release status:
-
-helm status azure-webapp
-
-Check release history:
-
-helm history azure-webapp
+Supported Chart Checks
 
 Render the templates without deploying:
 
@@ -81,22 +65,8 @@ helm template azure-webapp ./helm/azure-webapp
 Validate the chart:
 
 helm lint ./helm/azure-webapp
-Upgrade
+Application image changes are made by committing the intended immutable tag to `values.yaml`; Argo CD then detects and reconciles the Git revision. Inspect the Argo CD `Application` for release state rather than Helm release history.
 
-Deploy a new application image:
-
-helm upgrade azure-webapp ./helm/azure-webapp \
-  --set image.repository=<acr-login-server>/azure-webapp \
-  --set image.tag=<new-image-tag>
-Rollback
-
-View release history:
-
-helm history azure-webapp
-
-Rollback to a previous release:
-
-helm rollback azure-webapp <revision-number>
 Outcome
 
-This phase converted the application deployment into a reusable and manageable Helm release that could later be controlled through Argo CD.
+This phase established a reusable Helm chart. It is a GitOps input, not a directly operated application release.

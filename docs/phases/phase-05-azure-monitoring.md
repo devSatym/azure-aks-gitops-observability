@@ -1,4 +1,7 @@
-Phase 5 — Azure Monitoring and Alerting
+# Phase 5 — Azure Monitoring and Alerting
+
+> Historical phase note: this document describes the monitoring design. Read `docs/codex/03-VALIDATION.md` for current ingestion and alert-test evidence; do not infer that an alert or email was verified solely from the configuration described here.
+
 Objective
 
 The objective of this phase was to provide Azure-native visibility into AKS cluster and workload health.
@@ -45,7 +48,7 @@ This query displays recent Pod and container status information.
 
 Alert Scenarios
 
-Configured or tested alert scenarios include:
+Terraform configures the following alert scenarios; their individual validation status belongs in the current validation record:
 
 Node not ready
 Failed Pods
@@ -74,15 +77,17 @@ Validate that Container Insights is connected:
 az aks show \
   --resource-group <resource-group-name> \
   --name <aks-cluster-name> \
-  --query addonProfiles.omsAgent
+  --query addonProfiles.omsagent
+
+For managed-identity Container Insights onboarding, also verify that the data collection rule and its association with AKS exist, then validate actual Log Analytics ingestion with KQL.
 
 Check recent Pods:
 
-kubectl get pods --all-namespaces
+kubectl --kubeconfig <project-kubeconfig> get pods --all-namespaces
 
 Check Pod restart counts:
 
-kubectl get pods \
+kubectl --kubeconfig <project-kubeconfig> get pods \
   --all-namespaces \
   -o custom-columns="NAMESPACE:.metadata.namespace,POD:.metadata.name,RESTARTS:.status.containerStatuses[*].restartCount"
 Evidence
@@ -92,4 +97,4 @@ Evidence
 
 Outcome
 
-This phase enabled centralised Azure-native monitoring, operational querying and proactive alerting for AKS workloads.
+This phase records the Azure-native monitoring design. Only captured validation evidence establishes that ingestion or notification delivery is working in a live environment.

@@ -1,4 +1,7 @@
-Phase 2 — Containerised Application Deployment
+# Phase 2 — Containerised Application Deployment
+
+> Historical and superseded deployment stage. Raw Kubernetes manifests are not the supported application delivery path in this repository. The application is rendered from `helm/azure-webapp` and reconciled by Argo CD; use Git changes to its desired state rather than applying manifests directly.
+
 Objective
 
 The objective of this phase was to package a sample web application as a Docker container and deploy it to Azure Kubernetes Service.
@@ -43,7 +46,7 @@ Container port
 Pod labels
 Deployment selector
 
-Example workload structure:
+Illustrative workload structure (not a deployable repository manifest):
 
 apiVersion: apps/v1
 kind: Deployment
@@ -83,28 +86,37 @@ spec:
 The Service selector must match the Pod label:
 
 app: azure-webapp
-Initial Deployment
+Current Delivery Path
 
-Apply the Kubernetes configuration:
+The supported path is:
 
-kubectl apply -f <manifest-file>.yaml
+Application source change
+   ↓
+GitHub Actions builds and pushes an immutable image to ACR
+   ↓
+GitHub Actions commits the image tag to Helm desired state
+   ↓
+Argo CD reconciles the Helm chart into AKS
+
+Do not deploy or update `azure-webapp` with raw manifests or direct `kubectl` workload commands.
+
 Workload Validation
 
 Validate the Deployment:
 
-kubectl get deployments
+kubectl --kubeconfig <project-kubeconfig> get deployments
 
 Validate the Pods:
 
-kubectl get pods
+kubectl --kubeconfig <project-kubeconfig> get pods
 
 Validate the Service:
 
-kubectl get svc
+kubectl --kubeconfig <project-kubeconfig> get svc
 
 Validate the application rollout:
 
-kubectl rollout status deployment/azure-webapp
+kubectl --kubeconfig <project-kubeconfig> rollout status deployment/azure-webapp
 
 Expected states:
 
@@ -116,15 +128,15 @@ Troubleshooting Commands
 
 Inspect a Pod:
 
-kubectl describe pod <pod-name>
+kubectl --kubeconfig <project-kubeconfig> describe pod <pod-name>
 
 View container logs:
 
-kubectl logs <pod-name>
+kubectl --kubeconfig <project-kubeconfig> logs <pod-name>
 
 Inspect the Deployment:
 
-kubectl describe deployment azure-webapp
+kubectl --kubeconfig <project-kubeconfig> describe deployment azure-webapp
 Evidence
 
 
@@ -135,4 +147,4 @@ Evidence
 
 Outcome
 
-This phase confirmed that the application image could be retrieved from ACR, deployed to AKS and accessed externally through a LoadBalancer Service.
+This historical phase explains the workload components. Current delivery and availability claims must be backed by the GitOps and validation records, not this guide.

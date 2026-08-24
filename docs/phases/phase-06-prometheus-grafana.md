@@ -1,4 +1,7 @@
-Phase 6 — Prometheus and Grafana
+# Phase 6 — Prometheus and Grafana
+
+> Historical phase note: this guide describes the monitoring-stack installation pattern. Use a dedicated project kubeconfig for every Helm or `kubectl` command, and consult `docs/codex/03-validation.md` for live evidence.
+
 Objective
 
 The objective of this phase was to add Kubernetes-native metrics collection and dashboard visualisation.
@@ -34,7 +37,8 @@ Install the monitoring stack:
 helm upgrade --install kube-prometheus-stack \
   prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
-  --create-namespace
+  --create-namespace \
+  --kubeconfig <project-kubeconfig>
 Monitoring Flow
 AKS Nodes and Workloads
    ↓
@@ -61,20 +65,20 @@ Validation
 
 Check monitoring Pods:
 
-kubectl get pods -n monitoring
+kubectl --kubeconfig <project-kubeconfig> get pods -n monitoring
 
 Check the Helm release:
 
-helm list -n monitoring
+helm list -n monitoring --kubeconfig <project-kubeconfig>
 
 Check release status:
 
-helm status kube-prometheus-stack -n monitoring
+helm status kube-prometheus-stack -n monitoring --kubeconfig <project-kubeconfig>
 Access Grafana
 
 Forward the local port:
 
-kubectl port-forward \
+kubectl --kubeconfig <project-kubeconfig> port-forward \
   svc/kube-prometheus-stack-grafana \
   3000:80 \
   -n monitoring
@@ -82,7 +86,7 @@ kubectl port-forward \
 Open:
 
 http://localhost:3000
-Validated Dashboard
+Dashboard to Inspect
 Kubernetes / Compute Resources / Cluster
 
 This dashboard provides a high-level view of:
@@ -98,4 +102,4 @@ Evidence
 
 Outcome
 
-This phase added detailed Kubernetes metrics and dashboard-based observability alongside Azure-native monitoring.
+This phase describes the intended in-cluster metrics and dashboard capability. Confirm installed components, scrape health, and dashboard access through current validation evidence.

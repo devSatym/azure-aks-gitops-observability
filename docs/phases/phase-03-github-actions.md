@@ -1,4 +1,7 @@
-Phase 3 — GitHub Actions and OIDC
+# Phase 3 — GitHub Actions and OIDC
+
+> Historical phase note: use `docs/codex/` for the configured identity, least-privilege scope, and run evidence. This document describes the intended CI responsibilities; it is not a source for secret values or live configuration.
+
 Objective
 
 The objective of this phase was to automate the Docker image build and delivery process using GitHub Actions.
@@ -57,10 +60,7 @@ The workflow uses repository variables such as:
 Variable	Purpose
 ACR_NAME	Azure Container Registry name
 ACR_LOGIN_SERVER	Full ACR login server
-AKS_RESOURCE_GROUP	AKS resource group
-AKS_CLUSTER_NAME	AKS cluster name
 IMAGE_NAME	Container image repository name
-DEPLOYMENT_NAME	Kubernetes Deployment name
 GitHub Actions Responsibilities
 
 GitHub Actions performs:
@@ -71,6 +71,7 @@ Docker image build
 Commit-based image tagging
 Authentication to ACR
 Image push to ACR
+Commit of the immutable image tag to Helm desired state
 
 The workflow should be named according to its actual responsibility:
 
@@ -97,9 +98,6 @@ Kubernetes release
 Workflow File
 .github/workflows/deploy-aks.yml
 
-The file can later be renamed to something clearer:
-
-.github/workflows/build-push-image.yml
 ACR Validation
 
 List image tags:
@@ -115,4 +113,4 @@ Evidence
 
 Outcome
 
-This phase implemented secure and repeatable continuous integration for Docker image creation and delivery to Azure Container Registry.
+This phase describes the CI path for image creation and ACR delivery. Argo CD, not GitHub Actions, applies the application configuration to AKS.

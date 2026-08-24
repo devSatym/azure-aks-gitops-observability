@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phases 5–14 and the Prometheus/Grafana baseline are complete; Azure-native telemetry ingestion is in progress.
+Technical implementation and runtime validation are complete; final evidence capture and recipient confirmation remain.
 
 ## Current Status
 
-Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, Terraform apply, passwordless CI, Argo CD, the first CI-to-GitOps delivery, and a self-heal drift test are complete. The live application is `Synced`/`Healthy` with two Ready pods and a working LoadBalancer response. Prometheus/Grafana baseline checks pass. Container Insights diagnosis found that AKS runs the managed-identity add-on without the required DCR/DCRA resources; a saved Terraform correction plan adds exactly those two resources.
+Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, Terraform apply, passwordless CI, Argo CD, the first CI-to-GitOps delivery, and a self-heal drift test are complete. The live application is `Synced`/`Healthy` with two Ready pods and a working LoadBalancer response. Prometheus/Grafana baseline checks pass. Container Insights diagnosis found that AKS runs the managed-identity add-on without the required DCR/DCRA resources; the reviewed Terraform correction created exactly those two resources, and current pod/node records now arrive in Log Analytics. A disposable failed-pod test matched KQL and produced a real Sev2 scheduled-query alert; its pod was deleted after collection.
 
 ## Completed
 
@@ -18,7 +18,7 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Confirmed safe sequencing: install Argo first, but apply the Application only after CI has committed the first real ACR SHA tag.
 - Documented a dedicated-project kubeconfig requirement so commands never target the existing unrelated GKE context.
 - Secret-scanned and pushed the reviewed source/documentation migration to `origin/main` through `0768bfa`.
-- Registered required Azure providers: Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, and Insights.
+- Registered required Azure providers: Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, Insights, Monitor, and Alerts Management.
 - Created `rg-aksops-dev-tfstate` in Central India, `staksopsdevtf20260824` (StorageV2/Standard_LRS, TLS 1.2, public blob access disabled, shared-key access disabled), and its private `tfstate` container.
 - Assigned the Terraform operator `Storage Blob Data Contributor` at the state storage account scope and initialized the AzureRM backend using Entra/Azure CLI authentication.
 - Created ignored deployment inputs using the documented Central India / `aksops` / `dev` / two-node `Standard_D2s_v5` defaults and the user-supplied Action Group recipient. The recipient remains local and untracked.
@@ -35,19 +35,25 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Installed `kube-prometheus-stack` 88.5.4 in `monitoring`. Prometheus has 18/18 active targets and the application replica metric; Grafana is healthy with 29 supplied dashboards.
 - Inspected the Action Group and all three enabled scheduled-query rules without exposing the recipient. Each rule has a five-minute frequency and 15-minute window.
 - Added `docs/screenshots/README.md` to distinguish inherited images from the 13 required fresh captures.
-- Diagnosed empty Log Analytics data: `ama-logs` is healthy and AKS reports managed-identity monitoring enabled, but Azure has no `Microsoft.Insights/dataCollectionRules` or DCR association and agent logs report missing DCR JSON.
+- Diagnosed empty Log Analytics data: `ama-logs` is healthy and AKS reports managed-identity monitoring enabled, but Azure initially had no `Microsoft.Insights/dataCollectionRules` or DCR association and agent logs reported missing DCR JSON.
+- Applied the reviewed Container Insights correction successfully: Terraform created the standard DCR and its `ContainerInsightsExtension` AKS association (2 added, 0 changed, 0 destroyed). Azure confirms the association and the standard pod/node/container streams; the documented propagation interval then completed successfully.
+- Verified the propagated data: `KubePodInventory` returned 210 recent records with the columns used by the alert rules; `KubeNodeInventory` returned both AKS nodes as `Ready`.
+- Re-ran final Terraform quality checks: `terraform fmt -check -recursive` and `terraform validate` pass, and the refreshed saved plan reports `No changes`.
+- Registered Microsoft.ResourceHealth to inspect the failed-pod rule's evaluation health; the rule reports `Available` with no known issues.
+- Ran the controlled alert test safely: `ci-alert-test` started at `2026-08-24T08:57:05+05:30`, exited 1, appeared in KQL as `PodStatus=Failed` / `ContainerStatusReason=Error` at `2026-08-24T03:27:43Z`, and fired the Sev2 failed-pod rule first at `2026-08-24T03:28:47.4605953Z`. Azure Alert Management reported four fired instances before the test pod was deleted.
+- Completed the final repository hygiene scan: no tracked state/local backend files or secret-signature files were found, the local sensitive files remain ignored, and the supplied recipient address does not appear outside the untracked user brief.
 
 ## In Progress
 
-- Apply the saved two-resource Container Insights DCR/DCRA plan, then re-query Log Analytics for pod/node records before running the controlled failed-pod alert test.
+- Commit/push the completed documentation, obtain the recipient's confirmation that the Action Group email arrived, and capture fresh owner screenshots.
 
 ## Blocked
 
-- No infrastructure prerequisite is blocked. The reviewed monitoring correction is ready to apply; fresh ingestion, alert delivery, and owner screenshots remain later gates.
+- No infrastructure prerequisite is blocked. Recipient confirmation and owner screenshots are human evidence gates; no cloud change is pending.
 
 ## Next Action
 
-Apply the reviewed Container Insights correction: 2 creates (DCR and DCR association), 0 changes, 0 destroys. It adds no compute resource, but enables the intended full Container Insights stream set and therefore Log Analytics ingestion. After fresh pod/node records appear, create one disposable `restartPolicy: Never` failed pod, observe the KQL match and fired alert, delete the pod, and ask the recipient to confirm notification delivery. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
+Commit and push the accurate documentation, then ask the recipient to confirm notification delivery. Fresh screenshots should follow `docs/screenshots/README.md`; inherited PNGs remain non-evidence. The correction added no compute resource, but its intended full stream set incurs normal Log Analytics ingestion cost. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -59,6 +65,7 @@ Apply the reviewed Container Insights correction: 2 creates (DCR and DCR associa
 - AKS: `aks-aksops-dev-n8bo7j`, Kubernetes 1.35, Azure CNI, two Ready nodes.
 - ACR: `acraksopsdevn8bo7j` (Basic; admin disabled; legacy registry permissions).
 - Log Analytics: `law-aksops-dev-n8bo7j` (30-day retention), Action Group, and three AKS scheduled-query rules.
+- Container Insights: Terraform-managed `MSCI-centralindia-aks-aksops-dev-n8bo7j` DCR and `ContainerInsightsExtension` AKS association.
 - Project VNet/subnet plus ACR Pull and subnet Network Contributor role assignments.
 - Argo CD Helm release in `argocd` (chart 10.4.0 / app 3.5.1).
 - `azure-webapp` Argo Application and its two-replica LoadBalancer Deployment in `default`.
@@ -83,10 +90,10 @@ Apply the reviewed Container Insights correction: 2 creates (DCR and DCR associa
 | Helm lint/template | PASS; one Service and one two-replica Deployment render; Helm reports only an optional icon recommendation |
 | Local workflow structure | PASS; OIDC/ACR/GitOps update present, no direct AKS/Helm/Argo deployment command |
 | Azure account / inventory | PASS, read-only; one enabled/default subscription inspected without switch |
-| Azure provider registration | PASS; all required providers now report `Registered` |
+| Azure provider registration | PASS; all required providers, including Monitor, Alerts Management, and Resource Health, report `Registered` |
 | Remote AzureRM backend | PASS; Entra/Azure CLI init, private container access, and empty state blob confirmed |
 | Terraform plan | PASS; saved remote-state plan has 13 creates, 0 changes, and 0 destroys |
-| Terraform apply | PASS; 13 added, 0 changed, 0 destroyed |
+| Terraform apply / final drift plan | PASS; base apply 13 added, DCR/DCRA correction 2 added; final saved plan reports no changes |
 | ACR baseline | PASS; Basic SKU, provisioned, admin disabled |
 | AKS baseline / isolated kubeconfig | PASS; two Ready nodes and system/Container Insights pods running through dedicated project kubeconfig |
 | GitHub OIDC configuration and real login | PASS; dedicated federation/ACR-scoped `AcrPush` configured and first workflow OIDC login succeeded |
@@ -95,9 +102,12 @@ Apply the reviewed Container Insights correction: 2 creates (DCR and DCR associa
 | Argo CD / application | PASS; chart 10.4.0 / app 3.5.1 core healthy; Application Synced/Healthy at `751d2c4` |
 | Workload response | PASS; rollout has two Ready pods and the LoadBalancer response contains the delivery marker |
 | Drift correction | PASS; Argo restored replicas 4 → 2 in 28 seconds without a Git change |
-| Azure Monitor rules | PASS (configuration); Action Group and three enabled five-minute/15-minute KQL rules inspected |
+| Azure Monitor rules / rule health | PASS; Action Group and three enabled five-minute/15-minute KQL rules inspected; failed-pod rule reports Available health |
 | Prometheus / Grafana | PASS (baseline); Prometheus 18/18 active targets and workload replica metric; Grafana healthy with 29 dashboards |
-| Container Insights / KQL / fired alert | IN PROGRESS; diagnosis found the missing DCR/DCRA and a saved two-create corrective plan |
+| Container Insights / KQL | PASS; standard DCR/DCRA applied and live pod/node inventory queries return records |
+| Controlled failed-pod alert | PASS; test exited 1, matched KQL, and produced four real Sev2 `Fired` Log Alerts V2 instances; pod deleted after evidence |
+| Action Group email | PENDING human confirmation; recipient address is deliberately not recorded |
+| Secret hygiene | PASS; tracked state/backend and secret-signature scan is clean; local sensitive files remain ignored |
 
 ## Known Issues
 
@@ -129,4 +139,4 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — first CI-to-GitOps delivery, self-heal, and Prometheus/Grafana baseline pass; applying the reviewed Container Insights DCR/DCRA correction next.
+2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; final docs/secret scan are next, with email confirmation and screenshots remaining human evidence gates.

@@ -2,7 +2,7 @@
 
 ## Where are we?
 
-The project has a live, evidence-backed first delivery and has diagnosed a specific Azure-native telemetry configuration gap. Terraform applied the reviewed base plan as 13 adds; CI used OIDC to publish a SHA image and update Git; Argo deployed it and proved self-heal; Prometheus/Grafana baseline checks pass. A separate reviewed plan now adds the missing Container Insights DCR/DCRA pair before telemetry/alert validation.
+The project has a live, evidence-backed first delivery and has corrected a specific Azure-native telemetry configuration gap. Terraform applied the reviewed base plan as 13 adds; CI used OIDC to publish a SHA image and update Git; Argo deployed it and proved self-heal; Prometheus/Grafana baseline checks pass. A separate reviewed plan added the missing Container Insights DCR/DCRA pair (2 additions, no modifications or destruction), and live KQL now returns pod/node telemetry. The controlled failed-pod test has produced real Sev2 Azure Monitor alert instances and has been cleaned up.
 
 ## What works locally?
 
@@ -21,24 +21,24 @@ The project has a live, evidence-backed first delivery and has diagnosed a speci
 
 ## What remains unverified?
 
-- The reviewed DCR/DCRA correction must apply, then Container Insights ingestion and real KQL result records; a controlled failed-pod alert and recipient notification confirmation; fresh owner-captured screenshots.
-- README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
+- Recipient notification confirmation for the controlled fired alert; fresh owner-captured screenshots.
+- Inherited PNGs remain non-evidence. README, phase guides, resume material, interview prep, and cleanup guidance have been rewritten/updated from observed implementation facts and should receive the final secret scan/commit.
 
 ## Important external facts
 
 - The active Azure subscription was inspected without a subscription switch. It has the dedicated state backend plus `rg-aksops-dev-n8bo7j`, `aks-aksops-dev-n8bo7j`, `acraksopsdevn8bo7j`, `law-aksops-dev-n8bo7j`, VNet/subnet, Action Group, and three scheduled-query rules; `devops-rg` remains empty and untouched.
-- Required Azure resource providers now report `Registered`.
+- Required Azure resource providers, including Microsoft.Monitor and Microsoft.AlertsManagement, now report `Registered`.
 - The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. First delivery source `9d37a77` promoted to bot commit `751d2c4`; OIDC uses the repository's live immutable subject prefix, not the legacy name-only subject.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
 
-Argo CD was installed through the dedicated kubeconfig and validated before the Application existed. The first app commit completed OIDC login, ACR push, and a one-field GitOps update. After its real SHA tag existed, Argo synchronized a two-pod Deployment and LoadBalancer response. The reversible self-heal test and Prometheus/Grafana API checks then passed. Initial Log Analytics queries were empty; diagnosis found healthy managed-identity agents but no Container Insights DCR/DCRA and missing DCR JSON in the agent.
+Argo CD was installed through the dedicated kubeconfig and validated before the Application existed. The first app commit completed OIDC login, ACR push, and a one-field GitOps update. After its real SHA tag existed, Argo synchronized a two-pod Deployment and LoadBalancer response. The reversible self-heal test and Prometheus/Grafana API checks then passed. Initial Log Analytics queries were empty; diagnosis found healthy managed-identity agents but no Container Insights DCR/DCRA and missing DCR JSON in the agent. Terraform created the standard DCR and `ContainerInsightsExtension` association; live `KubePodInventory` and `KubeNodeInventory` now return current records. `ci-alert-test` exited 1, matched KQL, and produced four real Sev2 fired alert instances before it was deleted.
 
 ## What command/action comes next?
 
-1. Apply `terraform apply container-insights.tfplan` (reviewed: 2 creates, no changes/destroys).
-2. Re-run direct `KubePodInventory` and `KubeNodeInventory` queries; only after a current record appears, create/delete one disposable failed pod, verify the scheduled query fires, and request recipient confirmation without recording the email.
+1. Review/commit/push the completed implementation evidence; the final secret/documentation scan already passes.
+2. Request recipient confirmation for the Action Group email and capture the owner screenshots; do not record the email address or fabricate screenshot proof.
 
 ## What human input is needed?
 

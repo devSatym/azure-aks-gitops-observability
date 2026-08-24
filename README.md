@@ -1,331 +1,283 @@
 # Azure AKS GitOps CI/CD & Observability
 
-A modular Azure Kubernetes Service platform built using Terraform, Docker, Azure Container Registry, GitHub Actions, Helm, Argo CD, Azure Monitor, Prometheus, and Grafana.
+An evidence-led DevOps project that provisions an Azure Kubernetes Service (AKS) environment with Terraform, builds immutable container images through GitHub Actions and Azure OpenID Connect (OIDC), promotes the image tag through Git, and lets Argo CD deploy and reconcile the Helm chart. Azure Monitor/Container Insights and Prometheus/Grafana provide complementary Kubernetes observability paths.
 
-This project demonstrates an end-to-end container platform covering infrastructure provisioning, secure CI authentication, container image delivery, Kubernetes application packaging, GitOps deployment, monitoring, alerting, and observability.
+The active application deployment model is **Helm rendered by Argo CD**. GitHub Actions does not obtain AKS credentials or deploy application resources.
 
-## Structure
+## Overview
 
-1. Overview
-2. Architecture
-3. Terraform
-4. GitHub Actions
-5. OIDC Authentication
-6. ACR
-7. GitOps
-8. Helm
-9. Argo CD
-10. Azure Monitor
-11. KQL Alerts
-12. Prometheus/Grafana
-13. Failure Tests
-14. Evidence
-15. Deployment
-16. Teardown
-17. Limitations
-18. Credits
-
-## Business Problem
-
-Application teams need a reliable and repeatable platform for deploying containerised workloads.
-
-Manual infrastructure provisioning and direct Kubernetes deployments can introduce:
-
-* Configuration inconsistencies
-* Stored cloud credentials
-* Deployment drift
-* Limited monitoring visibility
-* Difficult release and rollback processes
-* Unclear separation between CI and deployment responsibilities
-
-## Solution
-
-This project implements an Azure AKS platform that provides:
-
-* Repeatable infrastructure using modular Terraform
-* Remote Terraform state management using Azure Storage
-* Passwordless GitHub Actions authentication using OIDC
-* Automated Docker image build and delivery to Azure Container Registry
-* Kubernetes application packaging using Helm
-* GitOps deployment and drift reconciliation using Argo CD
-* Azure-native monitoring using Container Insights and Log Analytics
-* Proactive alerting using Azure Monitor Alerts and Action Groups
-* Kubernetes-native observability using Prometheus and Grafana
+The project is deliberately small: one AKS cluster, one `azure-webapp` workload, one Azure Container Registry (ACR), three Azure Monitor scheduled-query rules, and an in-cluster `kube-prometheus-stack` installation. It demonstrates clear ownership boundaries and records the validation evidence in [`docs/codex/03-VALIDATION.md`](docs/codex/03-VALIDATION.md).
 
 ## Architecture
 
-![Azure AKS Platform Architecture](docs/architecture/architecture-diagram.png)
-
-### Application Delivery Flow
-
-```text
-Developer
-   ↓
-GitHub Repository
-   ↓
-GitHub Actions
-   ↓
-Docker Image Build
-   ↓
-Azure Container Registry
-   ↓
-Argo CD
-   ↓
-Helm Chart
-   ↓
-Azure Kubernetes Service
-   ↓
-LoadBalancer Service
-   ↓
-Application
+```mermaid
+flowchart TD
+  Dev[Developer] --> Repo[GitHub repository]
+  Repo --> CI[GitHub Actions]
+  CI -->|short-lived OIDC token| Entra[Microsoft Entra ID]
+  CI --> Build[Docker build]
+  Build --> ACR[Azure Container Registry<br/>azure-webapp:git-sha]
+  CI -->|commit only Helm image.tag| Repo
+  Repo --> Argo[Argo CD]
+  Argo --> Helm[Helm chart and values]
+  Helm --> AKS[Azure Kubernetes Service]
+  AKS --> Insights[Container Insights]
+  Insights --> LAW[Log Analytics workspace]
+  LAW --> KQL[KQL scheduled-query alerts]
+  KQL --> ActionGroup[Azure Monitor Action Group]
+  ActionGroup --> Email[Email notification]
+  AKS --> Prometheus[Prometheus]
+  Prometheus --> Grafana[Grafana]
 ```
 
-### Monitoring Flow
+## Problem / Goal
 
-```text
-Azure Kubernetes Service
-├── Container Insights
-│      ↓
-│   Log Analytics
-│      ↓
-│   Azure Monitor Alerts
-│      ↓
-│   Action Group
-│
-└── Prometheus
-       ↓
-    Grafana Dashboards
-```
+Manual infrastructure setup, long-lived cloud credentials, direct CI-to-cluster deployment, mutable image tags, and unobserved configuration drift make a small Kubernetes delivery path hard to audit. This project demonstrates a narrower alternative:
 
-## Platform Implementation Phases
-
-The platform was implemented progressively across the following phases:
-
-| Phase   | Platform Layer           | Main Capabilities                                               |
-| ------- | ------------------------ | --------------------------------------------------------------- |
-| Phase 1 | Azure Infrastructure     | Terraform modules, networking, ACR, AKS and Log Analytics       |
-| Phase 2 | Application Deployment   | Docker container, Kubernetes Deployment, Pods and Service       |
-| Phase 3 | Continuous Integration   | GitHub Actions, Azure OIDC, image build and ACR delivery        |
-| Phase 4 | Application Packaging    | Helm chart, templates, values, upgrades and rollback            |
-| Phase 5 | Azure Monitoring         | Container Insights, Log Analytics, KQL, alerts and Action Group |
-| Phase 6 | Kubernetes Observability | Prometheus metrics and Grafana dashboards                       |
-| Phase 7 | GitOps Deployment        | Argo CD synchronisation, self-healing and drift reconciliation  |
-
-## Phase Documentation
-
-### Phase 1 — Azure Infrastructure Foundation
-
-Provision the Azure resource group, virtual network, AKS subnet, Azure Container Registry, AKS cluster, Log Analytics Workspace, Container Insights and alerting resources using modular Terraform.
-
-[Read Phase 1 — Azure Infrastructure Foundation](docs/phases/phase-01-infrastructure.md)
-
-### Phase 2 — Containerised Application Deployment
-
-Build the sample application as a Docker image and deploy it to AKS using a Kubernetes Deployment, Pods and a LoadBalancer Service.
-
-[Read Phase 2 — Containerised Application Deployment](docs/phases/phase-02-application-deployment.md)
-
-### Phase 3 — GitHub Actions and OIDC
-
-Configure passwordless GitHub-to-Azure authentication, automatically build the Docker image, assign a commit-based image tag and push the image to Azure Container Registry.
-
-[Read Phase 3 — GitHub Actions and OIDC](docs/phases/phase-03-github-actions.md)
-
-### Phase 4 — Helm Application Packaging
-
-Migrate the application from raw Kubernetes manifests to a reusable Helm chart containing configurable Deployment and Service templates.
-
-[Read Phase 4 — Helm Application Packaging](docs/phases/phase-04-helm.md)
-
-### Phase 5 — Azure Monitoring and Alerting
-
-Enable Container Insights and Log Analytics, validate workload data using KQL, configure Azure Monitor alerts and send notifications through an Action Group.
-
-[Read Phase 5 — Azure Monitoring and Alerting](docs/phases/phase-05-azure-monitoring.md)
-
-### Phase 6 — Prometheus and Grafana
-
-Deploy the `kube-prometheus-stack` Helm chart and validate cluster, node, namespace, pod and workload metrics using Grafana dashboards.
-
-[Read Phase 6 — Prometheus and Grafana](docs/phases/phase-06-prometheus-grafana.md)
-
-### Phase 7 — Argo CD GitOps
-
-Configure Argo CD to monitor the Helm chart in GitHub, synchronise the desired state to AKS and automatically correct configuration drift.
-
-[Read Phase 7 — Argo CD GitOps](docs/phases/phase-07-argocd-gitops.md)
-
-### Platform Validation and Cleanup
-
-Validate the complete platform using Terraform, Azure CLI, kubectl, Helm and Argo CD commands. This guide also contains failure testing and cleanup procedures.
-
-[Read Platform Validation and Cleanup](docs/phases/validation-and-cleanup.md)
+- Terraform describes the Azure infrastructure and monitoring configuration.
+- GitHub Actions authenticates to Azure without a stored client secret, builds a SHA-tagged image, and commits the desired image tag.
+- Argo CD reads that desired state from Git, deploys the Helm chart, and self-heals live drift.
+- Azure Monitor and Prometheus/Grafana expose cluster and workload telemetry through different, complementary tools.
 
 ## Technology Stack
 
-| Area                     | Technology                            |
-| ------------------------ | ------------------------------------- |
-| Cloud Platform           | Microsoft Azure                       |
-| Infrastructure as Code   | Terraform                             |
-| Container Platform       | Azure Kubernetes Service              |
-| Container Registry       | Azure Container Registry              |
-| Containerisation         | Docker                                |
-| Continuous Integration   | GitHub Actions                        |
-| Cloud Authentication     | OpenID Connect                        |
-| Application Packaging    | Helm                                  |
-| GitOps                   | Argo CD                               |
-| Azure Monitoring         | Azure Monitor and Container Insights  |
-| Logging                  | Log Analytics                         |
-| Alerting                 | Azure Monitor Alerts and Action Group |
-| Kubernetes Observability | Prometheus and Grafana                |
+| Area | Technology |
+| --- | --- |
+| Cloud and infrastructure as code | Microsoft Azure, Terraform, AzureRM |
+| Kubernetes and registry | AKS, Azure CNI, ACR, Docker |
+| CI and identity | GitHub Actions, GitHub OIDC, Microsoft Entra ID |
+| Desired state and delivery | Git, Helm, Argo CD |
+| Azure-native observability | Azure Monitor, Container Insights, Log Analytics, KQL, Action Groups |
+| Kubernetes metrics | kube-prometheus-stack, Prometheus, Grafana |
 
 ## Repository Structure
 
 ```text
 .
-├── .github/
-│   └── workflows/
-│       └── deploy-aks.yml
-├── app/
-├── helm/
-│   └── azure-webapp/
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-│           ├── deployment.yaml
-│           └── service.yaml
+├── .github/workflows/deploy-aks.yml       # build, push, and GitOps promotion
+├── app/                                   # intentionally small static workload
+├── argocd/azure-webapp-application.yaml   # Argo CD Application
+├── helm/azure-webapp/                     # sole application deployment source
 ├── modules/
-│   ├── resource_group/
-│   ├── network/
 │   ├── acr/
 │   ├── aks/
+│   ├── alerts/
+│   ├── container_insights/
 │   ├── monitoring/
-│   └── alerts/
+│   ├── network/
+│   └── resource_group/
 ├── docs/
-│   ├── architecture/
-│   │   └── architecture-diagram.png
-│   ├── screenshots/
-│   └── phases/
-│       ├── phase-01-infrastructure.md
-│       ├── phase-02-application-deployment.md
-│       ├── phase-03-github-actions.md
-│       ├── phase-04-helm.md
-│       ├── phase-05-azure-monitoring.md
-│       ├── phase-06-prometheus-grafana.md
-│       ├── phase-07-argocd-gitops.md
-│       └── validation-and-cleanup.md
-└── README.md
+│   ├── codex/                             # audit, plan, decisions, evidence, handoff
+│   ├── screenshots/                       # fresh owner-capture checklist
+│   ├── RESUME.md
+│   └── INTERVIEW-PREP.md
+├── main.tf
+├── providers.tf
+├── variables.tf
+├── outputs.tf
+├── backend.hcl.example
+└── terraform.tfvars.example
 ```
 
-Adjust this repository tree if the actual Terraform root files are stored in an additional folder.
+## Infrastructure with Terraform
 
-## Key Platform Responsibilities
+Terraform creates the project resource group, virtual network and AKS subnet, ACR, AKS, Log Analytics workspace, action group, scheduled-query alerts, and the least-privilege role assignments needed by AKS. The Container Insights module manages both the data collection rule (DCR) and its AKS association, which is required for the managed-identity monitoring configuration used here.
 
-### Terraform
+State is deliberately not coupled to an upstream or personal storage account. The root configuration contains an empty AzureRM backend, [`backend.hcl.example`](backend.hcl.example) documents placeholders, and the real `backend.hcl` is ignored. The live backend uses Azure CLI/Entra authentication rather than a storage key.
 
-Terraform provisions and manages the Azure infrastructure.
+The provisioned environment has two `Standard_D2s_v5` worker nodes, Azure CNI networking, a Basic ACR with admin access disabled, and 30-day Log Analytics retention. Exact live resource names and current status are in [`docs/codex/02-PROJECT-STATUS.md`](docs/codex/02-PROJECT-STATUS.md).
 
-```text
-Terraform
-   ↓
-Azure Resource Group
-   ↓
-Networking
-   ↓
-Azure Container Registry
-   ↓
-Azure Kubernetes Service
-   ↓
-Monitoring and Alerting
+## GitHub Actions CI
+
+[`deploy-aks.yml`](.github/workflows/deploy-aks.yml) is intentionally a CI-and-promotion workflow:
+
+1. Checks out a source change.
+2. Logs into Azure with GitHub OIDC.
+3. Builds and pushes `azure-webapp:<first-7-source-sha>` to ACR.
+4. Changes only `helm/azure-webapp/values.yaml:image.tag`.
+5. Commits the desired-state update as `github-actions[bot]` and stops.
+
+It has no `az aks get-credentials`, `kubectl`, Helm application release, or Argo sync step. The first live validation built and pushed `azure-webapp:9d37a77`; bot commit `751d2c4` changed only the intended Helm tag.
+
+## Passwordless Azure OIDC
+
+The repository uses one dedicated Microsoft Entra application/service principal with a GitHub main-branch federated credential. Its subject is derived from GitHub's live OIDC subject customization endpoint rather than hard-coding a legacy repository-name pattern. GitHub stores only the standard identifiers as Actions secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+The service principal has `AcrPush` at the project ACR scope only. It has no client secret, no routine AKS administrator permission, and no subscription-wide Contributor role. See the [GitHub OIDC documentation](https://docs.github.com/en/actions/concepts/security/openid-connect) and [Microsoft workload identity federation guidance](https://learn.microsoft.com/entra/workload-id/workload-identity-federation-create-trust).
+
+## Azure Container Registry
+
+ACR stores the immutable image that CI publishes. Its repository is the sole `image.repository` value in [`helm/azure-webapp/values.yaml`](helm/azure-webapp/values.yaml); the tag is a seven-character source SHA, not `latest`.
+
+AKS pulls from the registry through an ACR-scoped `AcrPull` assignment for the kubelet identity. ACR admin authentication remains disabled. The first validated artifact was `azure-webapp:9d37a77`, with its digest recorded in the live status/evidence documentation.
+
+## GitOps Delivery
+
+Git is the promotion boundary. An application-source commit produces an ACR image, and the CI bot then commits the matching immutable tag into Helm values. Argo CD observes the Git revision and reconciles it to AKS. This makes the source SHA, ACR tag/digest, promotion commit, and Argo revision traceable without giving CI Kubernetes deployment ownership.
+
+The first delivery validated this sequence end to end: GitHub Actions OIDC login, image build/push, one-field desired-state commit, Argo synchronization, two Ready application pods, and a successful response through the LoadBalancer Service.
+
+## Helm
+
+The Helm chart in [`helm/azure-webapp`](helm/azure-webapp) renders the `azure-webapp` Deployment and LoadBalancer Service. Its `values.yaml` is the single source of image configuration:
+
+```yaml
+image:
+  repository: <project-acr>.azurecr.io/azure-webapp
+  tag: <git-sha>
+  pullPolicy: IfNotPresent
 ```
 
-### GitHub Actions
+Raw Kubernetes application manifests were retired after the chart was verified to render the equivalent active resources. Do not add a second direct-apply deployment path.
 
-GitHub Actions performs continuous integration.
+## Argo CD
 
-```text
-Source Code Change
-   ↓
-GitHub Actions
-   ↓
-Azure Login Using OIDC
-   ↓
-Docker Image Build
-   ↓
-Image Push to ACR
+Argo CD is installed with the official Helm chart in the `argocd` namespace. The [`azure-webapp` Application](argocd/azure-webapp-application.yaml) points to this fork's `main` branch and the Helm chart path, with automated sync, prune, and `selfHeal` enabled. It does not override Helm image values.
+
+The live Application reached `Synced` and `Healthy`. A controlled drift test scaled the Deployment from two replicas to four; Argo reported it out of sync and restored the Git-defined two replicas in 28 seconds without a Git change. See the [Argo CD installation guide](https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/).
+
+## Azure Monitor
+
+Terraform creates one Action Group and three enabled scheduled-query rules:
+
+- node not ready;
+- failed pod or CrashLoopBackOff;
+- recent container restart-count increase.
+
+Each live rule was inspected with a five-minute evaluation frequency and a 15-minute query window. The recipient address is intentionally local-only and never documented.
+
+## Container Insights
+
+AKS uses managed-identity authentication for Container Insights. During validation, the add-on pods were healthy but the required DCR and DCR association were absent, so no `KubePodInventory` records arrived. The Terraform-managed correction created the standard DCR and its `ContainerInsightsExtension` AKS association as two additions, without altering the workload or alert rules.
+
+The DCR is now `Succeeded`, includes the pod/node/container streams required by the queries, and `KubePodInventory` and `KubeNodeInventory` contain current records. This follows Microsoft's guidance that managed-identity Container Insights onboarding needs both a DCR and DCR association; data can take time to appear after reconfiguration. [Microsoft troubleshooting guidance](https://learn.microsoft.com/azure/azure-monitor/containers/container-insights-troubleshoot)
+
+## Log Analytics / KQL
+
+The live workspace records both current pod inventory and Ready node inventory. The following schema-appropriate query was validated against the deployed workspace:
+
+```kusto
+KubePodInventory
+| where TimeGenerated > ago(30m)
+| project TimeGenerated, Namespace, Name, PodStatus,
+          ContainerStatus, ContainerStatusReason, ContainerRestartCount
+| top 20 by TimeGenerated desc
 ```
 
-### Argo CD
+The corresponding node query projects `ClusterName`, `Computer`, and `Status` from `KubeNodeInventory`. KQL alert conditions in [`modules/alerts/main.tf`](modules/alerts/main.tf) use those same live table semantics, including `ContainerStatusReason` for CrashLoopBackOff and a time-window restart delta rather than a lifetime counter.
 
-Argo CD owns Kubernetes application deployment.
+## Alerting
 
-```text
-Helm Configuration in Git
-   ↓
-Argo CD
-   ↓
-Desired-State Comparison
-   ↓
-AKS Deployment
-   ↓
-Drift Reconciliation
+The alert configuration is present and enabled. The controlled `ci-alert-test` failed at 08:57:05 IST, appeared in `KubePodInventory` as `PodStatus=Failed` / `ContainerStatusReason=Error`, and produced its first real Sev2 Log Alerts V2 instance at 08:58:47 IST. Azure Alert Management recorded four fired instances for the failed-pod rule before the disposable pod was deleted. This validates Kubernetes pod failure → Container Insights → Log Analytics/KQL → scheduled-query alert. Action Group email delivery still requires the recipient's confirmation and is never inferred from configuration alone.
+
+## Prometheus & Grafana
+
+`kube-prometheus-stack` is installed in the `monitoring` namespace rather than Terraform-managed. The baseline validation found all relevant components Running, Prometheus healthy with 18/18 active targets, an application replica metric, and Grafana healthy with 29 supplied dashboards. Grafana is intentionally accessed through a local port-forward; no ingress, TLS, or custom application dashboard was added.
+
+These are Kubernetes infrastructure metrics. The application does not claim custom business or request instrumentation.
+
+## Validation Tests
+
+Only observed results are marked as passing. The complete, continuously updated matrix is [`docs/codex/03-VALIDATION.md`](docs/codex/03-VALIDATION.md).
+
+| Area | Observed evidence | Status |
+| --- | --- | --- |
+| Terraform | format/validate passed; reviewed base apply: 13 added, 0 changed, 0 destroyed; Container Insights correction: 2 added, 0 changed, 0 destroyed | PASS |
+| AKS / ACR | two AKS nodes Ready; Basic ACR provisioned with admin disabled; SHA image present | PASS |
+| OIDC and CI | real GitHub Actions OIDC login, Docker build, ACR push, and one-field GitOps promotion | PASS |
+| Argo delivery | Application Synced/Healthy, two Ready pods, reachable LoadBalancer response | PASS |
+| GitOps drift correction | live scale 2 → 4 → 2 restored by Argo in 28 seconds | PASS |
+| Container Insights / KQL | DCR/DCRA created; current pod and node inventory records returned | PASS |
+| Azure Monitor runtime alert | controlled failed pod matched KQL and produced four real Sev2 fired instances | PASS |
+| Action Group email | recipient confirmation is tracked separately and is never inferred from configuration | PENDING |
+| Prometheus / Grafana | 18/18 targets, workload metric, Grafana health and supplied dashboards | PASS |
+| Fresh screenshots | owner-captured evidence checklist exists | PENDING |
+
+## Failure Scenarios
+
+- **GitOps drift:** the live Deployment was scaled from two to four replicas. Argo CD detected the difference and self-healed it back to two replicas in 28 seconds.
+- **Controlled alert test:** a disposable `restartPolicy: Never` pod named `ci-alert-test` exited with code `1`, matched the failed-pod KQL condition, and produced four real Sev2 fired alert instances. It was deleted after the evidence was collected; no AKS node or production-like workload was disrupted.
+- **CI succeeds but rollout fails:** CI has still promoted a concrete Git revision. Investigate the Argo Application and Kubernetes events, correct the chart/image configuration through Git, or promote a previously known-good SHA tag. Do not bypass Argo with a direct CI deployment.
+
+## Screenshots
+
+Inherited image files are not presented as evidence for this Azure environment. Capture the 13 exact owner screenshots in [`docs/screenshots/README.md`](docs/screenshots/README.md) after each corresponding validation result is visible. The checklist states what to show and which values to redact.
+
+## Deployment Guide
+
+Prerequisites: an Azure subscription, Azure CLI/Terraform/Helm/kubectl/Docker/GitHub CLI access, GitHub repository administration, and a recipient address for the Action Group stored only in ignored local input.
+
+1. Create a dedicated Azure Storage backend and local ignored `backend.hcl` from [`backend.hcl.example`](backend.hcl.example). Use Entra/Azure CLI authentication; do not store a storage key in Git.
+2. Copy [`terraform.tfvars.example`](terraform.tfvars.example) to ignored `terraform.tfvars`, set the actual supported values locally, then initialize and review the plan:
+
+   ```bash
+   terraform init -reconfigure -backend-config=backend.hcl
+   terraform fmt -check -recursive
+   terraform validate
+   terraform plan -out=tfplan
+   terraform apply tfplan
+   ```
+
+3. Configure a dedicated Entra application/service principal and a main-branch GitHub federated credential using the repository's current OIDC subject. Grant only `AcrPush` at the created ACR scope. Configure the three `AZURE_*` GitHub secrets and the `ACR_NAME`, `ACR_LOGIN_SERVER`, and `IMAGE_NAME` variables without recording their values in Git.
+4. Obtain AKS credentials into a project-specific file; never overwrite an unrelated default kubeconfig:
+
+   ```bash
+   PROJECT_KUBECONFIG=/tmp/azure-aks-gitops-observability.kubeconfig
+   az aks get-credentials --resource-group <resource-group> --name <aks-name> --file "$PROJECT_KUBECONFIG"
+   kubectl --kubeconfig "$PROJECT_KUBECONFIG" get nodes
+   ```
+
+5. Install Argo CD in `argocd` and `kube-prometheus-stack` in `monitoring` from their current official Helm repositories. Apply only the Argo **Application** manifest after CI has produced and committed a real SHA image tag:
+
+   ```bash
+   kubectl --kubeconfig "$PROJECT_KUBECONFIG" apply -f argocd/azure-webapp-application.yaml
+   ```
+
+6. Push a harmless change under `app/`. Verify the Actions run, ACR SHA tag, bot-only Helm-tag diff, Argo sync/health, workload response, and monitoring evidence in sequence.
+
+## Cleanup
+
+Do not run destruction while evidence capture or documentation is unfinished. The following is the intended order after explicit approval:
+
+```bash
+# 1. Let Argo remove the application-managed workload.
+kubectl --kubeconfig "$PROJECT_KUBECONFIG" delete application azure-webapp --namespace argocd
+
+# 2. Remove in-cluster monitoring and Argo CD.
+helm uninstall kube-prometheus-stack --namespace monitoring
+helm uninstall argocd --namespace argocd
+
+# 3. Review destruction before applying it. Do not run without explicit approval.
+terraform plan -destroy -out=destroy.tfplan
+terraform show -no-color destroy.tfplan
+terraform apply destroy.tfplan
 ```
 
-This separation ensures that GitHub Actions does not directly own the Kubernetes application deployment.
+The Terraform state backend is intentionally outside the Terraform configuration. Retain its resource group, storage account, and state container until all project evidence is exported and no state recovery is needed. Only then, under separate explicit approval, delete the state container/storage account/resource group with Azure CLI using Entra authentication. Backend deletion is irreversible and must occur last.
 
-## Project Evidence
+## Design Decisions
 
-### Azure Infrastructure
+The short ADRs in [`docs/codex/04-DECISIONS.md`](docs/codex/04-DECISIONS.md) explain the key choices:
 
-![Azure Resource Group](docs/screenshots/03-azure-resource-group.png)
+- CI updates Git while Argo CD deploys and reconciles it.
+- Immutable SHA tags replace `latest`.
+- Helm values are the sole image source; Argo has no image override.
+- GitHub OIDC and ACR-scoped RBAC replace stored client secrets and broad Azure access.
+- Azure Monitor/Container Insights and Prometheus/Grafana have distinct purposes.
+- Raw manifests were retired, and scope deliberately excludes HPA, ingress/TLS, private networking, Key Vault, service mesh, and extra environments.
 
-### GitHub Actions
+## Limitations
 
-![GitHub Actions Success](docs/screenshots/02-github-actions-success.png)
+- This is a deliberately narrow DevOps demonstration, not a multi-environment platform.
+- It uses a public LoadBalancer Service and local Grafana port-forwarding; it does not add ingress, a custom domain, TLS, private AKS/ACR, or custom application telemetry.
+- Container Insights/KQL and a fired Azure Monitor alert are validated; Action Group recipient confirmation must be recorded separately for a complete email-delivery claim.
+- Fresh screenshots are owner-captured work, not substitute evidence from inherited files.
+- Resource sizing and Log Analytics retention are chosen for the demonstrated environment and should be reassessed for a real workload.
 
-### Kubernetes Application
+## Credits / Upstream Reference
 
-![Kubernetes Pods and Service](docs/screenshots/06-kubectl-pods-service.png)
-
-### Application Availability
-
-![Application Running](docs/screenshots/07-browser-app-running.png)
-
-### Azure Monitor Alerts
-
-![Azure Monitor Alert Rules](docs/screenshots/10-alert-rules-action-group.png)
-
-### Grafana Dashboard
-
-![Grafana Kubernetes Dashboard](docs/screenshots/16-grafana-kubernetes-cluster-dashboard.png)
-
-### Argo CD GitOps
-
-![Argo CD Application Resource Tree](docs/screenshots/17-argocd-application-resource-tree.png)
-
-## Key Outcomes
-
-* Provisioned repeatable Azure infrastructure using modular Terraform.
-* Centralised Terraform state in Azure Storage for consistent infrastructure management.
-* Deployed and validated containerised workloads on Azure Kubernetes Service.
-* Implemented passwordless GitHub Actions authentication using OIDC.
-* Automated Docker image build and delivery to Azure Container Registry.
-* Migrated application configuration from raw Kubernetes YAML to Helm.
-* Implemented Argo CD as the Kubernetes deployment owner.
-* Separated continuous integration from GitOps deployment.
-* Validated Git-driven deployment and configuration reconciliation.
-* Enabled Azure-native monitoring using Container Insights and Log Analytics.
-* Added proactive Azure Monitor alerting and Action Group notifications.
-* Deployed Prometheus and Grafana for Kubernetes-native observability.
-
-## Future Improvements
-
-* Azure Key Vault integration
-* Microsoft Entra Workload Identity
-* Private AKS cluster
-* Private connectivity to Azure Container Registry
-* Azure Policy for AKS governance
-* Ingress controller with TLS
-* Horizontal Pod Autoscaler
-* Kubernetes network policies
-* Separate development and production environments
+This repository is an adaptation of [rambabu-eng/azure-aks-terraform-cicd-monitoring](https://github.com/rambabu-eng/azure-aks-terraform-cicd-monitoring). The project was updated and validated in a separate Azure environment, including the CI-to-GitOps handoff, ownership-specific environment configuration, Terraform state isolation, and current observability validation. Existing upstream licensing and attribution are preserved; this work does not claim authorship of the upstream project.

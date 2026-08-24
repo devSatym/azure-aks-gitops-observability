@@ -101,4 +101,4 @@ The application is a deliberately simple nginx page. The Helm chart renders one 
 
 ## Audit Conclusion
 
-The local repository is correctly migrated through the source-cleanup phases and passes local structural checks. The owner-controlled state backend is initialized. The remaining work is evidence-driven implementation: provision Azure, configure OIDC, perform the real GitOps/monitoring tests, and then replace inherited documentation with observed results. The immediate missing input is the Action Group email recipient; no AKS, ACR, Log Analytics, or application resource has been created.
+This audit was a pre-deployment snapshot. It established that the local repository was correctly migrated through the source-cleanup phases and that the owner-controlled state backend was initialized before any cloud implementation began. Subsequent Azure provisioning, OIDC, GitOps, monitoring, documentation, and validation results are recorded in `02-PROJECT-STATUS.md` and `03-VALIDATION.md`; this audit must not be read as current live-state evidence.

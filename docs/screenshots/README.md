@@ -29,4 +29,4 @@ The numbered PNG files already in this directory are inherited assets. They are 
 
 ## Current Evidence State
 
-The first CI-to-GitOps delivery, Argo self-heal, and Prometheus/Grafana baseline have command evidence in `docs/codex/03-VALIDATION.md`. Fresh owner-captured screenshots remain outstanding. Container Insights records, KQL results, and a delivered controlled alert must appear before the related captures are marked complete.
+The first CI-to-GitOps delivery, Argo self-heal, Prometheus/Grafana baseline, Container Insights records, KQL results, and a real controlled scheduled-query alert have command evidence in `docs/codex/03-VALIDATION.md`. Fresh owner-captured screenshots remain outstanding. Recipient confirmation should accompany the fired-alert capture, but it is not inferred from the alert configuration or fired record.

@@ -1,4 +1,7 @@
-Phase 1 — Azure Infrastructure Foundation
+# Phase 1 — Azure Infrastructure Foundation
+
+> Historical phase note: this is a design record, not the current operating runbook or evidence record. Use the current status and validation records under `docs/codex/` before making infrastructure changes.
+
 Objective
 
 The objective of this phase was to provision a repeatable Azure infrastructure foundation for running containerised applications on Azure Kubernetes Service.
@@ -28,13 +31,15 @@ modules/
 ├── acr/
 ├── aks/
 ├── monitoring/
+├── container_insights/
 └── alerts/
 Module	Responsibility
 resource_group	Creates the Azure resource group
 network	Creates the virtual network and AKS subnet
 acr	Creates Azure Container Registry
 aks	Creates the AKS cluster and node pool
-monitoring	Creates Log Analytics and enables Container Insights
+monitoring	Creates the Log Analytics workspace
+container_insights	Creates the Container Insights data collection rule and AKS association
 alerts	Creates alert rules and the notification Action Group
 Infrastructure Dependency Flow
 Resource Group
@@ -75,11 +80,12 @@ Retrieve the AKS credentials:
 az aks get-credentials \
   --resource-group <resource-group-name> \
   --name <aks-cluster-name> \
+  --file <project-kubeconfig> \
   --overwrite-existing
 
 Validate the cluster nodes:
 
-kubectl get nodes
+kubectl --kubeconfig <project-kubeconfig> get nodes
 
 Expected result:
 
@@ -111,4 +117,4 @@ Evidence
 
 Outcome
 
-This phase established the Azure infrastructure foundation required for application deployment, CI, monitoring and GitOps.
+This phase describes the infrastructure foundation for application delivery, CI, monitoring, and GitOps. Confirm the currently provisioned state through the validation records before relying on it.

@@ -26,7 +26,7 @@ flowchart TD
 
 ## Current Gate
 
-Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry exposed one source gap: the AKS add-on runs in managed-identity mode, but no Container Insights DCR/DCRA was created. A reviewed saved plan adds exactly that Terraform-managed DCR and association before telemetry validation resumes.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry exposed one source gap: the AKS add-on runs in managed-identity mode, but no Container Insights DCR/DCRA was created. The reviewed Terraform correction has now applied as exactly two additions (DCR and association); Azure Monitor ingestion is in its documented propagation window before KQL validation resumes.
 
 ## Phase 0 — Complete Repository Audit
 
@@ -226,8 +226,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 15 — Azure Container Insights
 
 - **Objective:** confirm AKS telemetry reaches its Log Analytics workspace.
-- **Current state:** AKS is provisioned and `ama-logs` DaemonSet/ReplicaSet pods are Running. Initial direct queries returned zero records; Azure resource inspection confirmed no Container Insights DCR or DCR association exists, and agent logs report missing DCR JSON.
-- **Required changes:** apply the reviewed two-resource Terraform correction: a standard Container Insights DCR with the required pod/node/container streams and its association to this AKS cluster. Then wait for fresh ingestion and rerun the exact timestamped queries.
+- **Current state:** complete. AKS is provisioned and `ama-logs` DaemonSet/ReplicaSet pods are Running. Initial direct queries returned zero records; diagnosis found no Container Insights DCR/DCRA and agent logs reported missing DCR JSON. The Terraform-managed DCR and association were created successfully (2 adds, 0 changes, 0 destroys), and current pod/node inventory records then arrived.
+- **Required changes:** none. Do not toggle or restart the add-on; retain the Terraform-managed DCR/DCRA as the source of truth.
 - **Files affected:** validation/status docs.
 - **Commands/actions:** inspect AKS monitoring profile, wait for ingestion, inspect node/controller/container/pod data.
 - **Expected result:** current cluster inventory is available in Log Analytics.
@@ -239,8 +239,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 16 — Log Analytics / KQL
 
 - **Objective:** run schema-appropriate queries over the actual telemetry.
-- **Current state:** configuration and query syntax are inspected; actual result sets remain empty during initial ingestion.
-- **Required changes:** rerun pod/node queries after ingestion, then verify current columns/results before marking this phase complete.
+- **Current state:** complete. `KubePodInventory` returned 210 recent records, including expected `PodStatus`, `ContainerStatus`, `ContainerStatusReason`, and restart-count columns. `KubeNodeInventory` returned both AKS nodes with `Status` `Ready`.
+- **Required changes:** none before controlled alert evaluation; keep future queries schema-appropriate.
 - **Files affected:** validation/docs only.
 - **Commands/actions:** query recent pods/nodes and review actual schema before calling any test successful.
 - **Expected result:** meaningful workload/cluster queries return records.
@@ -252,8 +252,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 17 — Azure Monitor Alert Rules
 
 - **Objective:** verify the three Terraform-created rules and their Action Group.
-- **Current state:** configuration complete. One enabled Action Group with one receiver and three enabled scheduled-query rules exist; each has a 5-minute frequency and 15-minute window, with the inspected KQL/threshold/action-group association from Terraform.
-- **Required changes:** no Terraform change; verify runtime evaluation after telemetry arrives.
+- **Current state:** complete. One enabled Action Group with one receiver and three enabled scheduled-query rules exist; each has a 5-minute frequency and 15-minute window, with the inspected KQL/threshold/action-group association from Terraform. The failed-pod rule is healthy and produced real Sev2 fired instances.
+- **Required changes:** no Terraform change.
 - **Files affected:** `modules/alerts/main.tf`, tracking/docs.
 - **Commands/actions:** inspect alert names, queries, frequencies, windows, thresholds, action group, and enabled state.
 - **Expected result:** Node Not Ready, failed/CrashLoop, and recent-restart alerts are live.
@@ -265,8 +265,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 18 — Controlled Alert Test
 
 - **Objective:** cause one safe, reversible alert that matches a real rule.
-- **Current state:** not started.
-- **Required changes:** temporary disposable failed pod only after KQL results are visible.
+- **Current state:** runtime alert validation complete; recipient confirmation pending. `ci-alert-test` was created at `2026-08-24T08:57:05+05:30` as a disposable `restartPolicy: Never` pod and exited with code 1. Its first `KubePodInventory` failed record is timestamped `2026-08-24T03:27:43Z`; Azure Alert Management recorded the first `Sev2` `Fired` instance at `2026-08-24T03:28:47.4605953Z` and four fired instances total. The test pod was deleted immediately after evidence collection.
+- **Required changes:** obtain recipient confirmation without recording the address; do not recreate the test unless that confirmation needs a repeat.
 - **Files affected:** transient cluster object and validation docs.
 - **Commands/actions:** create a `restartPolicy: Never` busybox failure (or an equivalent minimal resource proven to satisfy the deployed query), record timestamps through ingestion/alert/email, then delete it.
 - **Expected result:** a failed pod appears in Log Analytics, alert fires, and Action Group notification arrives.
@@ -317,7 +317,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 22 — Final Validation Suite
 
 - **Objective:** run all Terraform, Kubernetes, CI/CD, GitOps, Azure monitoring, and Grafana checks together.
-- **Current state:** only local static checks have passed.
+- **Current state:** substantially complete. Final `terraform fmt -check -recursive` and `terraform validate` pass; a refreshed saved plan reports `No changes`. Kubernetes, CI/CD, GitOps, Container Insights/KQL, Prometheus/Grafana, and a real fired alert are captured; recipient confirmation and owner screenshots remain human gates.
 - **Required changes:** none unless validation finds a specific defect.
 - **Files affected:** validation/status/handoff docs.
 - **Commands/actions:** `terraform fmt -check`, `validate`, drift-free plan; node/app/Argo checks; CI lineage; alert/notification and Grafana proof.
@@ -330,7 +330,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 23 — Resume Material
 
 - **Objective:** create honest, concise project bullets.
-- **Current state:** not started.
+- **Current state:** complete. `docs/RESUME.md` contains four evidence-only bullets and omits an unconfirmed notification-delivery claim.
 - **Required changes:** add `docs/RESUME.md` only after relevant tests pass.
 - **Files affected:** `docs/RESUME.md`.
 - **Commands/actions:** derive 3–4 bullets strictly from evidence.
@@ -343,7 +343,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 24 — Interview Handoff
 
 - **Objective:** explain the requested 36 topics from first principles.
-- **Current state:** not started.
+- **Current state:** complete. `docs/INTERVIEW-PREP.md` answers all 36 requested questions and distinguishes the real fired alert from pending recipient confirmation.
 - **Required changes:** add `docs/INTERVIEW-PREP.md` with short answer, detail, repo location, and validation per question.
 - **Files affected:** `docs/INTERVIEW-PREP.md`.
 - **Commands/actions:** derive answers from final design/evidence.
@@ -356,8 +356,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 25 — Cleanup Plan
 
 - **Objective:** document safe removal without executing it.
-- **Current state:** not started.
-- **Required changes:** document Argo application removal, monitoring/Argo Helm uninstall, Terraform destroy review, and backend retention/deletion sequence.
+- **Current state:** complete and documented in the final README; no cleanup command has been executed.
+- **Required changes:** retain the documented Argo application removal, monitoring/Argo Helm uninstall, Terraform destroy review, and backend retention/deletion sequence.
 - **Files affected:** final README, cleanup guide, handoff/status docs.
 - **Commands/actions:** list exact targets and confirm all evidence/docs before asking for destruction authorization.
 - **Expected result:** future cleanup is clear, ordered, and cost-aware.
