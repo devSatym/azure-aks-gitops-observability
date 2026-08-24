@@ -2,7 +2,7 @@
 
 ## Where are we?
 
-The project has a live, evidence-backed first delivery and is waiting only on Azure-native telemetry ingestion before controlled alert validation. Terraform applied the reviewed plan as 13 adds with no changes or destruction; CI used OIDC to publish a SHA image and update Git; Argo deployed it and proved self-heal; Prometheus/Grafana baseline checks pass.
+The project has a live, evidence-backed first delivery and has diagnosed a specific Azure-native telemetry configuration gap. Terraform applied the reviewed base plan as 13 adds; CI used OIDC to publish a SHA image and update Git; Argo deployed it and proved self-heal; Prometheus/Grafana baseline checks pass. A separate reviewed plan now adds the missing Container Insights DCR/DCRA pair before telemetry/alert validation.
 
 ## What works locally?
 
@@ -21,7 +21,7 @@ The project has a live, evidence-backed first delivery and is waiting only on Az
 
 ## What remains unverified?
 
-- Container Insights ingestion and real KQL result records; a controlled failed-pod alert and recipient notification confirmation; fresh owner-captured screenshots.
+- The reviewed DCR/DCRA correction must apply, then Container Insights ingestion and real KQL result records; a controlled failed-pod alert and recipient notification confirmation; fresh owner-captured screenshots.
 - README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
 
 ## Important external facts
@@ -33,12 +33,12 @@ The project has a live, evidence-backed first delivery and is waiting only on Az
 
 ## What was last done?
 
-Argo CD was installed through the dedicated kubeconfig and validated before the Application existed. The first app commit completed OIDC login, ACR push, and a one-field GitOps update. After its real SHA tag existed, Argo synchronized a two-pod Deployment and LoadBalancer response. The reversible self-heal test and Prometheus/Grafana API checks then passed. Initial Log Analytics queries are empty while new-workspace telemetry ingests; no alert test has run.
+Argo CD was installed through the dedicated kubeconfig and validated before the Application existed. The first app commit completed OIDC login, ACR push, and a one-field GitOps update. After its real SHA tag existed, Argo synchronized a two-pod Deployment and LoadBalancer response. The reversible self-heal test and Prometheus/Grafana API checks then passed. Initial Log Analytics queries were empty; diagnosis found healthy managed-identity agents but no Container Insights DCR/DCRA and missing DCR JSON in the agent.
 
 ## What command/action comes next?
 
-1. Re-run direct `KubePodInventory` and `KubeNodeInventory` queries after ingestion.
-2. Only after a current record appears, create/delete one disposable failed pod, verify the scheduled query fires, and request recipient confirmation without recording the email.
+1. Apply `terraform apply container-insights.tfplan` (reviewed: 2 creates, no changes/destroys).
+2. Re-run direct `KubePodInventory` and `KubeNodeInventory` queries; only after a current record appears, create/delete one disposable failed pod, verify the scheduled query fires, and request recipient confirmation without recording the email.
 
 ## What human input is needed?
 

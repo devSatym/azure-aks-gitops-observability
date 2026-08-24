@@ -26,7 +26,7 @@ flowchart TD
 
 ## Current Gate
 
-Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry is the remaining live gate: `ama-logs` pods run, but the new workspace has not yet returned `KubePodInventory`/`KubeNodeInventory` data.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry exposed one source gap: the AKS add-on runs in managed-identity mode, but no Container Insights DCR/DCRA was created. A reviewed saved plan adds exactly that Terraform-managed DCR and association before telemetry validation resumes.
 
 ## Phase 0 — Complete Repository Audit
 
@@ -226,14 +226,14 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 15 — Azure Container Insights
 
 - **Objective:** confirm AKS telemetry reaches its Log Analytics workspace.
-- **Current state:** AKS is provisioned and `ama-logs` DaemonSet/ReplicaSet pods are Running. Initial direct queries over the new workspace returned zero `KubePodInventory` and `KubeNodeInventory` records.
-- **Required changes:** wait for normal ingestion and rerun the exact timestamped queries before diagnosing configuration or altering the design.
+- **Current state:** AKS is provisioned and `ama-logs` DaemonSet/ReplicaSet pods are Running. Initial direct queries returned zero records; Azure resource inspection confirmed no Container Insights DCR or DCR association exists, and agent logs report missing DCR JSON.
+- **Required changes:** apply the reviewed two-resource Terraform correction: a standard Container Insights DCR with the required pod/node/container streams and its association to this AKS cluster. Then wait for fresh ingestion and rerun the exact timestamped queries.
 - **Files affected:** validation/status docs.
 - **Commands/actions:** inspect AKS monitoring profile, wait for ingestion, inspect node/controller/container/pod data.
 - **Expected result:** current cluster inventory is available in Log Analytics.
 - **Validation:** timestamped query results using the deployed workspace.
 - **Rollback/recovery:** diagnose the existing monitoring configuration; do not replace it with another stack.
-- **Dependencies:** Phase 5 and ingestion delay.
+- **Dependencies:** Phase 5, the DCR/DCRA correction, and ingestion delay.
 - **Human action required?:** no.
 
 ## Phase 16 — Log Analytics / KQL

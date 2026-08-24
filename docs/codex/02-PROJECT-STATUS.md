@@ -6,7 +6,7 @@ Phases 5–14 and the Prometheus/Grafana baseline are complete; Azure-native tel
 
 ## Current Status
 
-Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, Terraform apply, passwordless CI, Argo CD, the first CI-to-GitOps delivery, and a self-heal drift test are complete. The live application is `Synced`/`Healthy` with two Ready pods and a working LoadBalancer response. Prometheus/Grafana baseline checks pass. Container Insights agents run, but initial Log Analytics pod/node queries remain empty while the new workspace ingests data.
+Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, remote state, Terraform apply, passwordless CI, Argo CD, the first CI-to-GitOps delivery, and a self-heal drift test are complete. The live application is `Synced`/`Healthy` with two Ready pods and a working LoadBalancer response. Prometheus/Grafana baseline checks pass. Container Insights diagnosis found that AKS runs the managed-identity add-on without the required DCR/DCRA resources; a saved Terraform correction plan adds exactly those two resources.
 
 ## Completed
 
@@ -35,18 +35,19 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Installed `kube-prometheus-stack` 88.5.4 in `monitoring`. Prometheus has 18/18 active targets and the application replica metric; Grafana is healthy with 29 supplied dashboards.
 - Inspected the Action Group and all three enabled scheduled-query rules without exposing the recipient. Each rule has a five-minute frequency and 15-minute window.
 - Added `docs/screenshots/README.md` to distinguish inherited images from the 13 required fresh captures.
+- Diagnosed empty Log Analytics data: `ama-logs` is healthy and AKS reports managed-identity monitoring enabled, but Azure has no `Microsoft.Insights/dataCollectionRules` or DCR association and agent logs report missing DCR JSON.
 
 ## In Progress
 
-- Re-query Log Analytics for pod/node records, then run the controlled failed-pod alert test only after KQL confirms a matchable record.
+- Apply the saved two-resource Container Insights DCR/DCRA plan, then re-query Log Analytics for pod/node records before running the controlled failed-pod alert test.
 
 ## Blocked
 
-- No infrastructure prerequisite is blocked. Container Insights ingestion is the current asynchronous gate; alert-delivery and screenshot capture require later data/owner confirmation.
+- No infrastructure prerequisite is blocked. The reviewed monitoring correction is ready to apply; fresh ingestion, alert delivery, and owner screenshots remain later gates.
 
 ## Next Action
 
-Re-query the actual workspace after ingestion. When a recent `KubePodInventory` record is visible, create one disposable `restartPolicy: Never` failed pod, observe the KQL match and fired alert, delete the pod, and ask the recipient to confirm notification delivery. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
+Apply the reviewed Container Insights correction: 2 creates (DCR and DCR association), 0 changes, 0 destroys. It adds no compute resource, but enables the intended full Container Insights stream set and therefore Log Analytics ingestion. After fresh pod/node records appear, create one disposable `restartPolicy: Never` failed pod, observe the KQL match and fired alert, delete the pod, and ask the recipient to confirm notification delivery. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -96,7 +97,7 @@ Re-query the actual workspace after ingestion. When a recent `KubePodInventory` 
 | Drift correction | PASS; Argo restored replicas 4 → 2 in 28 seconds without a Git change |
 | Azure Monitor rules | PASS (configuration); Action Group and three enabled five-minute/15-minute KQL rules inspected |
 | Prometheus / Grafana | PASS (baseline); Prometheus 18/18 active targets and workload replica metric; Grafana healthy with 29 dashboards |
-| Container Insights / KQL / fired alert | PENDING; `ama-logs` pods running but initial new-workspace queries have zero records |
+| Container Insights / KQL / fired alert | IN PROGRESS; diagnosis found the missing DCR/DCRA and a saved two-create corrective plan |
 
 ## Known Issues
 
@@ -128,4 +129,4 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — first CI-to-GitOps delivery, self-heal, and Prometheus/Grafana baseline pass; awaiting Container Insights ingestion before controlled alert validation.
+2026-08-24, Asia/Kolkata — first CI-to-GitOps delivery, self-heal, and Prometheus/Grafana baseline pass; applying the reviewed Container Insights DCR/DCRA correction next.

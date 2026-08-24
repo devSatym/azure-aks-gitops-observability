@@ -96,3 +96,10 @@
 **Context:** GitHub's OIDC customization endpoint for this repository returns an immutable subject prefix containing repository-owner and repository identifiers. A legacy name-only `repo:owner/repo:ref:...` federated credential would not match its emitted token.
 **Decision:** obtain the current prefix from the repository's OIDC customization API at setup time and append the narrowly scoped main-branch reference. Create one Entra federated credential from that exact value.
 **Consequences:** OIDC setup remains compatible with GitHub's current subject model without weakening the federation to another branch, environment, or repository.
+
+## ADR-015 — Manage the Container Insights DCR and association with Terraform
+
+**Status:** accepted and in implementation.
+**Context:** the AKS `oms_agent` block enabled managed-identity monitoring and deployed healthy `ama-logs` pods, but Azure created neither the Container Insights Data Collection Rule nor its association. The agent reported missing DCR JSON and no pod/node records reached Log Analytics. Current Microsoft AKS MSI-onboarding Terraform guidance declares both resources in addition to the AKS add-on.
+**Decision:** retain managed-identity authentication and add a Terraform-managed Container Insights DCR with the standard pod/node/container streams plus a DCR association targeted at this AKS cluster. Do not revert to workspace keys, enable ACR admin credentials, or add unrelated monitoring products.
+**Consequences:** the monitoring topology becomes declarative and reviewable. The correction adds no compute resource; once active, its intentional full stream set incurs normal Log Analytics ingestion cost and must be validated before controlled alert testing.

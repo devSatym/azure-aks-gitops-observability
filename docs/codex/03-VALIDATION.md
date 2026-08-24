@@ -30,8 +30,8 @@ Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED
 | Argo CD | Core pods healthy; Application Synced and Healthy | Helm chart 10.4.0 / Argo CD 3.5.1 deployed; Application Synced/Healthy at `751d2c4` | PASS | Helm/Kubernetes API, 2026-08-24 |
 | Application | LoadBalancer responds to intended page | Deployment rolled out 2/2; public response contains the delivery marker | PASS | `kubectl rollout status`, HTTP response, 2026-08-24 |
 | Drift correction | Argo restores desired replicas | Temporary live scale 2 → 4 became OutOfSync and returned to 2 in 28 seconds | PASS | timestamped Kubernetes/Application status, 2026-08-24 |
-| Container Insights | Cluster/workload telemetry appears | `ama-logs` pods Running; first direct workspace queries returned zero pod/node records | PENDING | AKS/KQL command output, 2026-08-24 |
-| KQL | Current schema query returns actual records | Initial `KubePodInventory`/`KubeNodeInventory` queries returned empty results | PENDING | Log Analytics query, 2026-08-24 |
+| Container Insights | Cluster/workload telemetry appears | `ama-logs` runs with MSI, but its DCR JSON is missing; Azure inventory confirms no DCR/DCRA. Saved correction plan adds those two resources only. | IN PROGRESS | AKS/agent logs/Azure resource inventory, 2026-08-24 |
+| KQL | Current schema query returns actual records | Initial `KubePodInventory`/`KubeNodeInventory` queries returned empty results; re-test follows the DCR/DCRA apply. | PENDING | Log Analytics query, 2026-08-24 |
 | Azure Monitor rules | Three rules and Action Group exist | One enabled Action Group with one receiver and three enabled 5-minute/15-minute rules inspected; recipient omitted | PASS (configuration) | Azure Resource Manager API, 2026-08-24 |
 | Fired alert / email | Controlled failed pod fires and notifies | Not run | BLOCKED | telemetry/rules/recipient confirmation required |
 | Prometheus / Grafana | Stack healthy and dashboards/metrics are available | Chart 88.5.4 healthy; Prometheus 18/18 targets and workload metric; Grafana health plus 29 supplied dashboards | PASS (baseline) | local-only port-forward/API checks, 2026-08-24 |
