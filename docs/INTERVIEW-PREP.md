@@ -1,6 +1,6 @@
 # Interview Preparation — Azure AKS GitOps CI/CD & Observability
 
-This guide is grounded in the repository and the recorded validation evidence. It does not treat configuration as runtime proof where that proof has not been collected. The disposable `ci-alert-test` pod was observed in KQL and produced a real scheduled-query alert; Action Group recipient confirmation remains a separate human evidence gate.
+This guide is grounded in the repository and the recorded validation evidence. It does not treat configuration as runtime proof where that proof has not been collected. The disposable `ci-alert-test` pod was observed in KQL, produced a real scheduled-query alert, and the configured recipient confirmed email receipt.
 
 ## 1. What problem does this project solve?
 
@@ -300,17 +300,17 @@ This guide is grounded in the repository and the recorded validation evidence. I
 
 **Where it exists in this repo:** `modules/alerts/main.tf` declares `azurerm_monitor_action_group.this`; the recipient input is declared in `modules/alerts/variables.tf` and provided only through ignored local configuration.
 
-**How we validated it:** Azure inspection confirmed one enabled Action Group with one receiver and confirmed that all three scheduled-query rules reference it. Receipt by the human recipient is still awaiting confirmation and is not treated as a passed test.
+**How we validated it:** Azure inspection confirmed one enabled Action Group with one receiver and confirmed that all three scheduled-query rules reference it. After the controlled fired alert, the configured recipient confirmed email receipt; the address itself remains undisclosed.
 
 ## 31. What controlled failure was tested?
 
 **Short interview answer:** A disposable `ci-alert-test` pod with `restartPolicy: Never` was intentionally failed, observed in `KubePodInventory` using KQL, and produced real Azure Monitor fired-alert instances.
 
-**Detailed explanation:** The test was designed to exercise the deployed failed-pod condition safely without disturbing the two-replica application. The pod is a temporary live test artifact, not a permanent application manifest. Its KQL observation proved that the telemetry path records the relevant failure state after the DCR/DCRA correction. Azure Alert Management then recorded four real Sev2 fired instances for the failed-pod rule. The pod was deleted after collection; Action Group recipient confirmation is still required before claiming email delivery.
+**Detailed explanation:** The test was designed to exercise the deployed failed-pod condition safely without disturbing the two-replica application. The pod is a temporary live test artifact, not a permanent application manifest. Its KQL observation proved that the telemetry path records the relevant failure state after the DCR/DCRA correction. Azure Alert Management then recorded four real Sev2 fired instances for the failed-pod rule. The pod was deleted after collection, and the configured recipient confirmed the Action Group email delivery without the address being recorded.
 
 **Where it exists in this repo:** The alert condition is in `modules/alerts/main.tf`; the temporary pod itself is intentionally not tracked as a deployment manifest. The ongoing runtime evidence is recorded in `docs/codex/03-VALIDATION.md` and `docs/codex/02-PROJECT-STATUS.md`.
 
-**How we validated it:** The disposable pod was created with a non-restarting failure behavior and appeared as a failed record in `KubePodInventory`. Azure Alert Management reported the first fired instance at `2026-08-24T03:28:47.4605953Z` and four fired instances total; the temporary pod was then deleted. The remaining human validation is the recipient's explicit email confirmation.
+**How we validated it:** The disposable pod was created with a non-restarting failure behavior and appeared as a failed record in `KubePodInventory`. Azure Alert Management reported the first fired instance at `2026-08-24T03:28:47.4605953Z` and four fired instances total; the temporary pod was then deleted. The configured recipient subsequently confirmed email receipt.
 
 ## 32. Azure Monitor vs Prometheus?
 
@@ -336,7 +336,7 @@ This guide is grounded in the repository and the recorded validation evidence. I
 
 **Short interview answer:** It is a focused demonstration environment, not a full production landing zone; several production controls and a portion of the alert proof remain intentionally incomplete.
 
-**Detailed explanation:** The project uses a small two-node AKS cluster, Basic ACR, a public LoadBalancer service, Argo's default project, and a simple nginx application. It does not currently implement HPA, ingress/TLS, Key Vault integration, private endpoints, network policies, production SLOs, image signing/scanning, branch protection, multi-zone resilience, or custom Grafana dashboards. The Azure Monitor failed-pod signal is visible in KQL and a scheduled-rule alert fired; human confirmation of the Action Group notification and fresh owner screenshots remain outstanding.
+**Detailed explanation:** The project uses a small two-node AKS cluster, Basic ACR, a public LoadBalancer service, Argo's default project, and a simple nginx application. It does not currently implement HPA, ingress/TLS, Key Vault integration, private endpoints, network policies, production SLOs, image signing/scanning, branch protection, multi-zone resilience, or custom Grafana dashboards. The Azure Monitor failed-pod signal is visible in KQL, a scheduled-rule alert fired, and the recipient confirmed delivery. Fresh owner screenshots remain outstanding.
 
 **Where it exists in this repo:** The current deployment scope is visible in `modules/`, `helm/azure-webapp/`, and `argocd/azure-webapp-application.yaml`; validation status and known gaps are maintained in `docs/codex/02-PROJECT-STATUS.md` and `docs/codex/03-VALIDATION.md`.
 

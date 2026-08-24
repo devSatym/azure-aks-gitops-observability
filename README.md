@@ -172,7 +172,7 @@ The corresponding node query projects `ClusterName`, `Computer`, and `Status` fr
 
 ## Alerting
 
-The alert configuration is present and enabled. The controlled `ci-alert-test` failed at 08:57:05 IST, appeared in `KubePodInventory` as `PodStatus=Failed` / `ContainerStatusReason=Error`, and produced its first real Sev2 Log Alerts V2 instance at 08:58:47 IST. Azure Alert Management recorded four fired instances for the failed-pod rule before the disposable pod was deleted. This validates Kubernetes pod failure → Container Insights → Log Analytics/KQL → scheduled-query alert. Action Group email delivery still requires the recipient's confirmation and is never inferred from configuration alone.
+The alert configuration is present and enabled. The controlled `ci-alert-test` failed at 08:57:05 IST, appeared in `KubePodInventory` as `PodStatus=Failed` / `ContainerStatusReason=Error`, and produced its first real Sev2 Log Alerts V2 instance at 08:58:47 IST. Azure Alert Management recorded four fired instances for the failed-pod rule before the disposable pod was deleted. The configured recipient subsequently confirmed email receipt. This validates Kubernetes pod failure → Container Insights → Log Analytics/KQL → scheduled-query alert → Action Group email without recording the recipient address.
 
 ## Prometheus & Grafana
 
@@ -193,7 +193,7 @@ Only observed results are marked as passing. The complete, continuously updated 
 | GitOps drift correction | live scale 2 → 4 → 2 restored by Argo in 28 seconds | PASS |
 | Container Insights / KQL | DCR/DCRA created; current pod and node inventory records returned | PASS |
 | Azure Monitor runtime alert | controlled failed pod matched KQL and produced four real Sev2 fired instances | PASS |
-| Action Group email | recipient confirmation is tracked separately and is never inferred from configuration | PENDING |
+| Action Group email | recipient confirmed receipt after the controlled fired alert | PASS |
 | Prometheus / Grafana | 18/18 targets, workload metric, Grafana health and supplied dashboards | PASS |
 | Fresh screenshots | owner-captured evidence checklist exists | PENDING |
 
@@ -274,7 +274,7 @@ The short ADRs in [`docs/codex/04-DECISIONS.md`](docs/codex/04-DECISIONS.md) exp
 
 - This is a deliberately narrow DevOps demonstration, not a multi-environment platform.
 - It uses a public LoadBalancer Service and local Grafana port-forwarding; it does not add ingress, a custom domain, TLS, private AKS/ACR, or custom application telemetry.
-- Container Insights/KQL and a fired Azure Monitor alert are validated; Action Group recipient confirmation must be recorded separately for a complete email-delivery claim.
+- Fresh screenshots are owner-captured work, not substitute evidence from inherited files.
 - Fresh screenshots are owner-captured work, not substitute evidence from inherited files.
 - Resource sizing and Log Analytics retention are chosen for the demonstrated environment and should be reassessed for a real workload.
 

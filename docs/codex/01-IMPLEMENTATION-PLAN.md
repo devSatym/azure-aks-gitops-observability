@@ -265,15 +265,15 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 18 — Controlled Alert Test
 
 - **Objective:** cause one safe, reversible alert that matches a real rule.
-- **Current state:** runtime alert validation complete; recipient confirmation pending. `ci-alert-test` was created at `2026-08-24T08:57:05+05:30` as a disposable `restartPolicy: Never` pod and exited with code 1. Its first `KubePodInventory` failed record is timestamped `2026-08-24T03:27:43Z`; Azure Alert Management recorded the first `Sev2` `Fired` instance at `2026-08-24T03:28:47.4605953Z` and four fired instances total. The test pod was deleted immediately after evidence collection.
-- **Required changes:** obtain recipient confirmation without recording the address; do not recreate the test unless that confirmation needs a repeat.
+- **Current state:** complete. `ci-alert-test` was created at `2026-08-24T08:57:05+05:30` as a disposable `restartPolicy: Never` pod and exited with code 1. Its first `KubePodInventory` failed record is timestamped `2026-08-24T03:27:43Z`; Azure Alert Management recorded the first `Sev2` `Fired` instance at `2026-08-24T03:28:47.4605953Z` and four fired instances total. The test pod was deleted immediately after evidence collection, and the configured recipient confirmed email delivery without the address being recorded.
+- **Required changes:** none.
 - **Files affected:** transient cluster object and validation docs.
 - **Commands/actions:** create a `restartPolicy: Never` busybox failure (or an equivalent minimal resource proven to satisfy the deployed query), record timestamps through ingestion/alert/email, then delete it.
 - **Expected result:** a failed pod appears in Log Analytics, alert fires, and Action Group notification arrives.
 - **Validation:** query match, fired alert record, and recipient confirmation.
 - **Rollback/recovery:** delete the test pod promptly; never break a node.
-- **Dependencies:** Phases 15–17 and alert recipient confirmation.
-- **Human action required?:** **yes — confirm receipt of the notification.**
+- **Dependencies:** Phases 15–17.
+- **Human action required?:** no.
 
 ## Phase 19 — Prometheus and Grafana
 
@@ -304,8 +304,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 21 — Final README Rewrite
 
 - **Objective:** make the README accurately describe this DevOps project and actual evidence.
-- **Current state:** deferred; current README is inherited/stale.
-- **Required changes:** rewrite all required sections, include Mermaid architecture, deployment/cleanup instructions, limitations, and upstream credit; remove platform framing, false evidence, direct deployment, excluded-tech roadmap, and the stale PNG architecture reference.
+- **Current state:** complete. README is evidence-led, contains all required sections and a Mermaid architecture diagram, and removes the inherited platform framing, direct deployment guidance, excluded-tech roadmap, and stale architecture image reference.
+- **Required changes:** none unless a future implementation change requires documentation reconciliation.
 - **Files affected:** `README.md`, possibly `docs/phases/*`.
 - **Commands/actions:** reconcile each claim with the validation matrix.
 - **Expected result:** README matches the implemented and tested system.
@@ -317,7 +317,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 22 — Final Validation Suite
 
 - **Objective:** run all Terraform, Kubernetes, CI/CD, GitOps, Azure monitoring, and Grafana checks together.
-- **Current state:** substantially complete. Final `terraform fmt -check -recursive` and `terraform validate` pass; a refreshed saved plan reports `No changes`. Kubernetes, CI/CD, GitOps, Container Insights/KQL, Prometheus/Grafana, and a real fired alert are captured; recipient confirmation and owner screenshots remain human gates.
+- **Current state:** technically complete. Final `terraform fmt -check -recursive` and `terraform validate` pass; a refreshed saved plan reports `No changes`. Kubernetes, CI/CD, GitOps, Container Insights/KQL, Prometheus/Grafana, a real fired alert, and recipient-confirmed email delivery are captured. Fresh owner screenshots remain the only evidence capture gate.
 - **Required changes:** none unless validation finds a specific defect.
 - **Files affected:** validation/status/handoff docs.
 - **Commands/actions:** `terraform fmt -check`, `validate`, drift-free plan; node/app/Argo checks; CI lineage; alert/notification and Grafana proof.
@@ -343,7 +343,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 24 — Interview Handoff
 
 - **Objective:** explain the requested 36 topics from first principles.
-- **Current state:** complete. `docs/INTERVIEW-PREP.md` answers all 36 requested questions and distinguishes the real fired alert from pending recipient confirmation.
+- **Current state:** complete. `docs/INTERVIEW-PREP.md` answers all 36 requested questions and records the real fired alert plus recipient-confirmed delivery.
 - **Required changes:** add `docs/INTERVIEW-PREP.md` with short answer, detail, repo location, and validation per question.
 - **Files affected:** `docs/INTERVIEW-PREP.md`.
 - **Commands/actions:** derive answers from final design/evidence.

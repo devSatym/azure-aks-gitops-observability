@@ -37,12 +37,11 @@ Argo CD was installed through the dedicated kubeconfig and validated before the 
 
 ## What command/action comes next?
 
-1. Request recipient confirmation for the Action Group email and capture the owner screenshots; do not record the email address or fabricate screenshot proof.
-2. Do not run cleanup or `terraform destroy` until the required human evidence is complete and explicit destruction approval is given.
+1. Capture the owner screenshots in `docs/screenshots/README.md`; do not fabricate screenshot proof or expose sensitive values.
+2. Do not run cleanup or `terraform destroy` until the required evidence is captured and explicit destruction approval is given.
 
 ## What human input is needed?
 
-- Confirm the notification when the controlled alert test occurs.
 - Capture the fresh checklist items in `docs/screenshots/README.md`; inherited images cannot be used as proof.
 
 ## Safe credential and cluster commands

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Technical implementation and runtime validation are complete; final evidence capture and recipient confirmation remain.
+Technical implementation and runtime validation are complete; fresh owner screenshots are the remaining planned evidence capture.
 
 ## Current Status
 
@@ -41,19 +41,20 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Re-ran final Terraform quality checks: `terraform fmt -check -recursive` and `terraform validate` pass, and the refreshed saved plan reports `No changes`.
 - Registered Microsoft.ResourceHealth to inspect the failed-pod rule's evaluation health; the rule reports `Available` with no known issues.
 - Ran the controlled alert test safely: `ci-alert-test` started at `2026-08-24T08:57:05+05:30`, exited 1, appeared in KQL as `PodStatus=Failed` / `ContainerStatusReason=Error` at `2026-08-24T03:27:43Z`, and fired the Sev2 failed-pod rule first at `2026-08-24T03:28:47.4605953Z`. Azure Alert Management reported four fired instances before the test pod was deleted.
+- The configured Action Group recipient confirmed delivery of the controlled alert email. The recipient address remains local-only and unrecorded.
 - Completed the final repository hygiene scan: no tracked state/local backend files or secret-signature files were found, the local sensitive files remain ignored, and the supplied recipient address does not appear outside the untracked user brief.
 
 ## In Progress
 
-- Obtain the recipient's confirmation that the Action Group email arrived and capture fresh owner screenshots.
+- Capture the fresh owner screenshots listed in `docs/screenshots/README.md` and attach them only as current-environment evidence.
 
 ## Blocked
 
-- No infrastructure prerequisite is blocked. Recipient confirmation and owner screenshots are human evidence gates; no cloud change is pending.
+- No infrastructure prerequisite is blocked. Fresh owner screenshots are the remaining human evidence gate; no cloud change is pending.
 
 ## Next Action
 
-Ask the recipient to confirm notification delivery. Fresh screenshots should follow `docs/screenshots/README.md`; inherited PNGs remain non-evidence. The correction added no compute resource, but its intended full stream set incurs normal Log Analytics ingestion cost. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
+Capture fresh screenshots according to `docs/screenshots/README.md`; inherited PNGs remain non-evidence. The correction added no compute resource, but its intended full stream set incurs normal Log Analytics ingestion cost. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -106,7 +107,7 @@ Ask the recipient to confirm notification delivery. Fresh screenshots should fol
 | Prometheus / Grafana | PASS (baseline); Prometheus 18/18 active targets and workload replica metric; Grafana healthy with 29 dashboards |
 | Container Insights / KQL | PASS; standard DCR/DCRA applied and live pod/node inventory queries return records |
 | Controlled failed-pod alert | PASS; test exited 1, matched KQL, and produced four real Sev2 `Fired` Log Alerts V2 instances; pod deleted after evidence |
-| Action Group email | PENDING human confirmation; recipient address is deliberately not recorded |
+| Action Group email | PASS; configured recipient confirmed delivery after the controlled fired alert; recipient address is deliberately not recorded |
 | Secret hygiene | PASS; tracked state/backend and secret-signature scan is clean; local sensitive files remain ignored |
 
 ## Known Issues
@@ -139,4 +140,4 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; final documentation/secret scan is committed and pushed, with email confirmation and screenshots remaining human evidence gates.
+2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; recipient confirmed Action Group email delivery. Fresh owner screenshots are the remaining planned evidence capture.

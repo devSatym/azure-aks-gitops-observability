@@ -99,7 +99,7 @@
 
 ## ADR-015 — Manage the Container Insights DCR and association with Terraform
 
-**Status:** accepted and implemented; live pod/node ingestion, KQL validation, and a controlled fired alert pass. Recipient email confirmation remains a human evidence gate.
+**Status:** accepted and implemented; live pod/node ingestion, KQL validation, a controlled fired alert, and recipient-confirmed email delivery pass.
 **Context:** the AKS `oms_agent` block enabled managed-identity monitoring and deployed healthy `ama-logs` pods, but Azure created neither the Container Insights Data Collection Rule nor its association. The agent reported missing DCR JSON and no pod/node records reached Log Analytics. Current Microsoft AKS MSI-onboarding Terraform guidance declares both resources in addition to the AKS add-on.
 **Decision:** retain managed-identity authentication and add a Terraform-managed Container Insights DCR with the standard pod/node/container streams plus a DCR association targeted at this AKS cluster. Do not revert to workspace keys, enable ACR admin credentials, or add unrelated monitoring products.
 **Consequences:** the monitoring topology becomes declarative and reviewable. The correction adds no compute resource; once active, its intentional full stream set incurs normal Log Analytics ingestion cost and must be validated before controlled alert testing.
