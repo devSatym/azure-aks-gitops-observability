@@ -148,10 +148,10 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 9 — GitHub Actions CI to GitOps Promotion
 
 - **Objective:** publish an immutable image then commit the desired tag rather than deploy directly.
-- **Current state:** complete locally but the five commits must be pushed before GitHub/Argo can observe them.
-- **Required changes:** push the reviewed local commits; configure external variables/secrets in Phase 6.
+- **Current state:** source is pushed to `origin/main`; GitHub/Argo can now observe the corrected workflow, chart, and Application.
+- **Required changes:** configure external variables/secrets in Phase 6.
 - **Files affected:** `.github/workflows/deploy-aks.yml`, Helm values during a real promotion, GitHub configuration.
-- **Commands/actions:** secret-scan, push, trigger an app change, inspect the exact GitOps diff and commit.
+- **Commands/actions:** trigger an app change, inspect the exact GitOps diff and commit.
 - **Expected result:** checkout → OIDC → ACR build/push → exact `image.tag` update → bot commit/push; no AKS control step.
 - **Validation:** workflow run, ACR tag, one promotion commit, and later Argo rollout correlate to the source SHA.
 - **Rollback/recovery:** commit a known-good tag and let Argo reconcile.

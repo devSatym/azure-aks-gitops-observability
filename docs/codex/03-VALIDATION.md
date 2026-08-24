@@ -15,7 +15,7 @@ Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED
 | Helm chart | Lint/render succeeds | Helm 3.21.2 lint passes; template renders one Service and one two-replica Deployment | PASS | command output, 2026-08-24 |
 | Docker build | Application image builds locally | Passed in the prior local validation recorded 2026-08-23; no source change since | PASS | `02-PROJECT-STATUS.md` historical command record |
 | GitOps workflow structure | OIDC + ACR push + deterministic one-field update; no direct cluster deploy | Source review confirms expected permissions/steps and no AKS/Helm/Argo deploy command | PASS (static) | `.github/workflows/deploy-aks.yml` |
-| Remote source parity | Fork sees current local migration | Local `main` remains ahead of `origin/main`; push pending | NOT RUN | `02-PROJECT-STATUS.md` |
+| Remote source parity | Fork sees current local migration | Seven reviewed commits pushed to `origin/main` at `4b71395` | PASS | `git push origin main`, 2026-08-24 |
 | Azure account inventory | Active subscription is inspected without a switch | One enabled/default subscription inspected; project resources absent | PASS | Azure CLI output, 2026-08-24 |
 | Azure provider registration | Required resource providers available | Required namespaces are currently `NotRegistered` | NOT RUN | `02-PROJECT-STATUS.md` |
 | Terraform remote backend | Owner-controlled Entra-authenticated Azure Storage state works | Not created | BLOCKED | alert-recipient/deployment preparation pending |

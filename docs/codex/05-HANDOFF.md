@@ -15,7 +15,6 @@ The project is ready to begin Azure backend bootstrap and infrastructure provisi
 
 ## What remains unverified?
 
-- Remote source parity: local `main` has unpushed commits, so GitHub currently does not yet see all corrected code.
 - Azure backend, provider registration, Terraform plan/apply, role effectiveness, ACR, AKS, OIDC, GitHub workflow run, image push, Argo, self-heal, Container Insights, KQL, alerts/email, Prometheus, and Grafana.
 - README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
 
@@ -23,7 +22,7 @@ The project is ready to begin Azure backend bootstrap and infrastructure provisi
 
 - The active Azure subscription was inspected, not changed. It is effectively empty for this project; `devops-rg` exists but is empty and must not be repurposed automatically.
 - Required Azure resource providers are currently `NotRegistered`; register them before backend/apply and wait until they report `Registered`.
-- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. No Actions secrets or variables are configured.
+- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Corrected source is pushed through `4b71395`; no Actions secrets or variables are configured.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
@@ -33,9 +32,8 @@ The audit identified and corrected three pre-deployment defects: absent AKS cust
 ## What command/action comes next?
 
 1. Obtain the user's Action Group recipient email.
-2. Commit and secret-scan the current local fixes; push the local migration commits to the fork.
-3. Register required Azure providers and create an owner-controlled state backend.
-4. Create ignored `backend.hcl` and `terraform.tfvars`, initialize remote state, plan, document cost/diff, and apply.
+2. Register required Azure providers and create an owner-controlled state backend.
+3. Create ignored `backend.hcl` and `terraform.tfvars`, initialize remote state, plan, document cost/diff, and apply.
 
 ## What human input is needed?
 

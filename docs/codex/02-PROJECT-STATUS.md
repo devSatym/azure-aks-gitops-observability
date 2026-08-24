@@ -6,7 +6,7 @@ Phase 4 — Azure backend bootstrap and Phase 5 deployment-input preparation.
 
 ## Current Status
 
-Repository audit, source cleanup, and a second Terraform correctness pass are complete locally. Azure CLI and GitHub CLI are authenticated, but no Azure resource has been created or changed. The source has not yet been pushed: local `main` is seven commits ahead of `origin/main`. Terraform plan/apply is deliberately paused for a user-selected Action Group email recipient.
+Repository audit, source cleanup, and a second Terraform correctness pass are complete locally and pushed to `origin/main`. Azure CLI and GitHub CLI are authenticated, but no Azure resource has been created or changed. Terraform plan/apply is deliberately paused for a user-selected Action Group email recipient.
 
 ## Completed
 
@@ -18,10 +18,10 @@ Repository audit, source cleanup, and a second Terraform correctness pass are co
 - Corrected the Azure Monitor KQL rules: node readiness uses `Status !contains "Ready"`; CrashLoop detection uses `ContainerStatusReason`; restart alert evaluates a 15-minute restart delta instead of a cumulative all-time count.
 - Confirmed the safer sequencing: install Argo first, but apply the Application only after CI has committed the first real ACR SHA tag.
 - Documented a dedicated-project kubeconfig requirement so commands never target the existing unrelated GKE context.
+- Secret-scanned and pushed the seven reviewed source/documentation commits to `origin/main` (`4b71395`).
 
 ## In Progress
 
-- Commit and secret-scan the current Terraform/documentation corrections, then push all reviewed local commits to the fork before GitHub Actions or Argo CD is configured.
 - Prepare owner-controlled backend/bootstrap commands and deployment inputs without persisting credentials.
 
 ## Blocked
@@ -44,6 +44,7 @@ Provide the email address that should receive Azure Monitor Action Group notific
 
 - Repository: `devSatym/azure-aks-gitops-observability` (public, default branch `main`, no branch protection).
 - GitHub CLI is authenticated as the repository administrator.
+- The corrected source is available on `origin/main` at `4b71395`.
 - No repository Actions secrets or variables exist yet.
 - Required later secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
 - Required later variables: `ACR_NAME`, `ACR_LOGIN_SERVER`, `IMAGE_NAME=azure-webapp`.
@@ -90,8 +91,7 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Local Commits
 
-- Earlier local-only commits: `26aa55e`, `72f0869`, `da509a2`, `672fb67`, `7d433fe`.
-- Current completion set: `1e5211e` (AKS network/alert corrections) and the documentation reconciliation recorded with this status update.
+- Source migration and current corrections are pushed through `4b71395`; the untracked user brief `plan.md` remains excluded.
 
 ## Last Updated
 
