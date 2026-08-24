@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   # GitHub Actions changes only image.tag after pushing an immutable SHA image.
   repository: "acraksopsdevn8bo7j.azurecr.io/azure-webapp"
-  tag: "bootstrap"
+  tag: "9d37a77"
   pullPolicy: IfNotPresent
 
 service:
