@@ -2,7 +2,7 @@
 
 ## Where are we?
 
-The project is ready to prepare a Terraform plan and provision application infrastructure. Audit, local source cleanup, a post-audit Terraform correctness pass, provider registration, and remote-state bootstrap are complete. Only the dedicated state backend has been created; no AKS/ACR/application resource exists yet.
+The project is ready to apply a reviewed Terraform plan and provision application infrastructure. Audit, local source cleanup, a post-audit Terraform correctness pass, provider registration, remote-state bootstrap, and the real plan are complete. Only the dedicated state backend has been created; no AKS/ACR/application resource exists yet.
 
 ## What works locally?
 
@@ -23,21 +23,20 @@ The project is ready to prepare a Terraform plan and provision application infra
 
 - The active Azure subscription was inspected without a subscription switch. It now has the dedicated state backend: `rg-aksops-dev-tfstate`, `staksopsdevtf20260824`, and private `tfstate`; `devops-rg` remains empty and untouched.
 - Required Azure resource providers now report `Registered`.
-- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Corrected source is pushed through `4b71395`; no Actions secrets or variables are configured.
+- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Corrected source is pushed through `bd6ac01`; no Actions secrets or variables are configured.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
 
-The audit identified and corrected three pre-deployment defects: absent AKS custom-subnet permission, CrashLoop query mismatch, and cumulative restart alert behavior. It also corrected the operating sequence so Argo is installed before, but its Application is applied only after the first real CI-produced image tag exists. A dedicated AzureRM backend was then created, secured with Entra RBAC, and initialized successfully.
+The audit identified and corrected three pre-deployment defects: absent AKS custom-subnet permission, CrashLoop query mismatch, and cumulative restart alert behavior. It also corrected the operating sequence so Argo is installed before, but its Application is applied only after the first real CI-produced image tag exists. A dedicated AzureRM backend was then created, secured with Entra RBAC, and initialized successfully. Ignored deployment inputs were then created, and the saved remote-state plan was reviewed: 13 intended creates, with no changes or destroys.
 
 ## What command/action comes next?
 
-1. Obtain the user's Action Group recipient email.
-2. Create ignored `terraform.tfvars`, plan, document cost/diff, and apply.
+1. Apply the reviewed saved plan.
+2. Collect outputs, update the Helm image repository, then configure Azure/GitHub OIDC and ACR-scoped CI access.
 
 ## What human input is needed?
 
-- Provide the Action Group email recipient. This value stays in ignored `terraform.tfvars` and must not be copied into documentation.
 - Confirm the notification when the controlled alert test occurs.
 - If Azure tenant policy prevents Entra application/federated credential creation, provide the required authorization rather than switching to a client secret.
 - Capture fresh screenshots later; inherited screenshots cannot be used as proof.

@@ -26,7 +26,7 @@ flowchart TD
 
 ## Current Gate
 
-Azure and GitHub are authenticated and the subscription was inspected without switching it. No project AKS, ACR, Log Analytics workspace, storage account, or backend exists. The Azure resource-provider registrations required by the configuration are not yet registered. The only missing Terraform input is a user-chosen Action Group recipient; no email address is written to tracked files.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. Required Azure resource providers are registered, and the dedicated AzureRM backend exists. Ignored deployment inputs contain the user-supplied Action Group recipient without recording it in Git. A saved remote-state plan has been reviewed: 13 intended creates, 0 changes, and 0 destroys. No project AKS, ACR, Log Analytics workspace, or alert resource exists until that plan is applied.
 
 ## Phase 0 — Complete Repository Audit
 
@@ -96,15 +96,15 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 5 — Terraform Plan and Apply
 
 - **Objective:** provision one intended Azure environment with no unexpected destruction.
-- **Current state:** no project resources exist; examples propose Central India, `aksops`, two `Standard_D2s_v5` nodes, but no real tfvars file exists.
-- **Required changes:** create ignored `terraform.tfvars`, choose region/SKU based on quota and cost, and populate the Action Group recipient.
+- **Current state:** the ignored local inputs use Central India, `aksops`, `dev`, two `Standard_D2s_v5` nodes, and the supplied recipient. The saved plan has 13 intended creates, 0 changes, and 0 destroys.
+- **Required changes:** apply only the reviewed saved plan and capture outputs.
 - **Files affected:** ignored `terraform.tfvars`, ignored `tfplan`, status/validation docs.
 - **Commands/actions:** `fmt -check`, `validate`, `plan -out=tfplan`; document adds/changes/destroys and major cost drivers; apply only the reviewed plan.
 - **Expected result:** resource group, VNet/subnet, ACR, AKS, Log Analytics, ACR pull/network roles, Action Group, and three alerts exist.
 - **Validation:** collect outputs; inspect AKS/ACR; `kubectl get nodes` and `kubectl get pods -A` after credentials are acquired locally.
 - **Rollback/recovery:** do not run destroy; resolve quota/provider errors with the smallest documented change.
 - **Dependencies:** Phase 4, quota, selected deployment inputs, alert recipient.
-- **Human action required?:** **yes — provide/confirm the alert recipient before a real plan/apply.**
+- **Human action required?:** no; recipient input is received and remains untracked.
 
 ## Phase 6 — GitHub to Azure OIDC
 

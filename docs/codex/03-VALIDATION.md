@@ -15,11 +15,12 @@ Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED
 | Helm chart | Lint/render succeeds | Helm 3.21.2 lint passes; template renders one Service and one two-replica Deployment | PASS | command output, 2026-08-24 |
 | Docker build | Application image builds locally | Passed in the prior local validation recorded 2026-08-23; no source change since | PASS | `02-PROJECT-STATUS.md` historical command record |
 | GitOps workflow structure | OIDC + ACR push + deterministic one-field update; no direct cluster deploy | Source review confirms expected permissions/steps and no AKS/Helm/Argo deploy command | PASS (static) | `.github/workflows/deploy-aks.yml` |
-| Remote source parity | Fork sees current local migration | Seven reviewed commits pushed to `origin/main` at `4b71395` | PASS | `git push origin main`, 2026-08-24 |
+| Remote source parity | Fork sees current local migration | Reviewed source/docs are pushed to `origin/main` through `bd6ac01` | PASS | `git push origin main`, 2026-08-24 |
 | Azure account inventory | Active subscription is inspected without a switch | One enabled/default subscription inspected; project resources absent | PASS | Azure CLI output, 2026-08-24 |
 | Azure provider registration | Required resource providers available | Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, and Insights report `Registered` | PASS | Azure CLI output, 2026-08-24 |
 | Terraform remote backend | Owner-controlled Entra-authenticated Azure Storage state works | Private `tfstate` container, Blob Data Contributor role, and `terraform init -reconfigure` succeed without a storage key | PASS | `02-PROJECT-STATUS.md`, Azure CLI/Terraform output |
-| Terraform plan/apply | Expected infrastructure created without unexpected destroys | Not run | BLOCKED | backend, inputs, provider registration pending |
+| Terraform plan | Expected infrastructure change set contains no unexpected destruction | Saved remote-state plan contains 13 creates, 0 changes, and 0 destroys | PASS | `tfplan`, 2026-08-24 |
+| Terraform apply | Planned infrastructure is created successfully | Not run; reviewed saved plan is next | BLOCKED | `tfplan` reviewed; provisioning in progress |
 | ACR | Registry exists; admin disabled; image tag is present | Not run | BLOCKED | Terraform/OIDC required |
 | AKS / ACR pull | Nodes Ready and workload can pull image | Not run | BLOCKED | Terraform/OIDC/GitOps required |
 | Isolated kubectl access | Project commands target only the new AKS cluster | Not run; default context is intentionally unsafe/unrelated | BLOCKED | ADR-013 |
@@ -34,4 +35,4 @@ Only commands and outcomes observed in this environment receive `PASS`. `BLOCKED
 | Fired alert / email | Controlled failed pod fires and notifies | Not run | BLOCKED | telemetry/rules/recipient confirmation required |
 | Prometheus / Grafana | Stack healthy and dashboard populated | Not run | BLOCKED | AKS required |
 | Screenshot evidence | Fresh screenshots map to observed tests | Not run | BLOCKED | live validation and owner capture required |
-| Secret hygiene | No secret/state/local backend config is tracked | Final scan pending commit/push | NOT RUN | — |
+| Secret hygiene | No secret/state/local backend config is tracked | Final scan pending the next documentation commit/push | NOT RUN | — |

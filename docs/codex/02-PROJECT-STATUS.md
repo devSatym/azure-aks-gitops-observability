@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 5 — Terraform plan and infrastructure provisioning preparation.
+Phase 5 — Terraform plan reviewed; infrastructure provisioning in progress.
 
 ## Current Status
 
-Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, and owner-controlled remote-state bootstrap are complete. The corrected source is pushed to `origin/main`. No AKS, ACR, Log Analytics workspace, alert rule, or application resource exists yet. Terraform plan/apply is paused only for a user-selected Action Group email recipient.
+Repository audit, source cleanup, Terraform correctness corrections, Azure provider registration, owner-controlled remote-state bootstrap, and a real Terraform plan are complete. The corrected source is pushed to `origin/main`. The reviewed plan contains only the intended 13 creates and no changes or destroys. Infrastructure has not yet been applied, so no project AKS, ACR, Log Analytics workspace, alert rule, or application resource exists yet.
 
 ## Completed
 
@@ -21,19 +21,21 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Registered required Azure providers: Storage, Network, Compute, Managed Identity, Container Service, Container Registry, Operational Insights, Operations Management, and Insights.
 - Created `rg-aksops-dev-tfstate` in Central India, `staksopsdevtf20260824` (StorageV2/Standard_LRS, TLS 1.2, public blob access disabled, shared-key access disabled), and its private `tfstate` container.
 - Assigned the Terraform operator `Storage Blob Data Contributor` at the state storage account scope and initialized the AzureRM backend using Entra/Azure CLI authentication.
+- Created ignored deployment inputs using the documented Central India / `aksops` / `dev` / two-node `Standard_D2s_v5` defaults and the user-supplied Action Group recipient. The recipient remains local and untracked.
+- Ran `terraform fmt -check -recursive`, `terraform validate`, and a remote-state Terraform plan successfully.
+- Reviewed the plan: 13 creates, 0 changes, and 0 destroys. Planned resources are the project resource group, VNet/subnet, ACR, AKS, Log Analytics workspace, two role assignments, Action Group, and three scheduled-query alert rules, plus the deterministic random suffix.
 
 ## In Progress
 
-- Prepare ignored Terraform deployment inputs and review a Terraform plan immediately after the alert recipient is supplied.
+- Apply the reviewed, saved Terraform plan and collect the resulting non-sensitive outputs.
 
 ## Blocked
 
-- Terraform plan/apply requires `alert_email`. The value is intentionally absent from tracked source and has not been assumed from the signed-in account.
-- Live AKS/ACR/OIDC/Argo/monitoring/alert/Grafana validation necessarily waits for infrastructure and external configuration.
+- Live AKS/ACR/OIDC/Argo/monitoring/alert/Grafana validation necessarily waits for the current Terraform apply and subsequent external configuration.
 
 ## Next Action
 
-Provide the email address that should receive Azure Monitor Action Group notifications. Unless directed otherwise, the deployment plan will use the documented example inputs: Central India, `project_name = "aksops"`, `environment = "dev"`, `node_count = 2`, and `node_vm_size = "Standard_D2s_v5"`, subject to quota/availability checks. The actual selected values will remain in ignored `terraform.tfvars`.
+Apply the reviewed saved plan. Its major expected cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, and a Basic ACR. The remote-state storage cost is expected to be minimal. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -65,8 +67,9 @@ Provide the email address that should receive Azure Monitor Action Group notific
 | Azure account / inventory | PASS, read-only; one enabled/default subscription inspected without switch |
 | Azure provider registration | PASS; all required providers now report `Registered` |
 | Remote AzureRM backend | PASS; Entra/Azure CLI init, private container access, and empty state blob confirmed |
+| Terraform plan | PASS; saved remote-state plan has 13 creates, 0 changes, and 0 destroys |
 | GitHub repository / configuration inventory | PASS, read-only; administrator access, no secrets/variables |
-| Live Terraform/AKS/ACR/OIDC/Argo/monitoring/Grafana | NOT RUN; application infrastructure/configuration does not exist yet |
+| Live Terraform apply / AKS / ACR / OIDC / Argo / monitoring / Grafana | NOT RUN; Terraform apply is next |
 
 ## Known Issues
 
@@ -94,8 +97,8 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Local Commits
 
-- Source migration/current corrections are pushed through `0768bfa`; the untracked user brief `plan.md` remains excluded.
+- Source migration/current corrections are pushed through `bd6ac01`; the untracked user brief `plan.md` remains excluded.
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — completed Azure backend bootstrap; awaiting alert-recipient input before a real plan/apply.
+2026-08-24, Asia/Kolkata — reviewed a real remote-state plan (13 creates, no changes/destroys); applying the saved plan next.
