@@ -45,7 +45,7 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 
 ## In Progress
 
-- Commit/push the completed documentation, obtain the recipient's confirmation that the Action Group email arrived, and capture fresh owner screenshots.
+- Obtain the recipient's confirmation that the Action Group email arrived and capture fresh owner screenshots.
 
 ## Blocked
 
@@ -53,7 +53,7 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 
 ## Next Action
 
-Commit and push the accurate documentation, then ask the recipient to confirm notification delivery. Fresh screenshots should follow `docs/screenshots/README.md`; inherited PNGs remain non-evidence. The correction added no compute resource, but its intended full stream set incurs normal Log Analytics ingestion cost. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
+Ask the recipient to confirm notification delivery. Fresh screenshots should follow `docs/screenshots/README.md`; inherited PNGs remain non-evidence. The correction added no compute resource, but its intended full stream set incurs normal Log Analytics ingestion cost. Major ongoing cost drivers are the two `Standard_D2s_v5` AKS worker nodes, the AKS Standard Load Balancer/public IP, Log Analytics ingestion and 30-day retention, Basic ACR, and the in-cluster monitoring stack. No destructive action is planned.
 
 ## Azure Resources Created
 
@@ -135,8 +135,8 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Local Commits
 
-- The application source and bot GitOps commits are pushed through `751d2c4`; the untracked user brief `plan.md` remains excluded.
+- The application source and bot GitOps commits are pushed through `751d2c4`; the final evidence/documentation handoff is pushed to `origin/main`; the untracked user brief `plan.md` remains excluded.
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; final docs/secret scan are next, with email confirmation and screenshots remaining human evidence gates.
+2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; final documentation/secret scan is committed and pushed, with email confirmation and screenshots remaining human evidence gates.
