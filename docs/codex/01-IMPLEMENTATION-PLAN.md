@@ -26,7 +26,7 @@ flowchart TD
 
 ## Current Gate
 
-Azure and GitHub are authenticated and the subscription was inspected without switching it. Required Azure resource providers are registered, and the dedicated AzureRM backend exists. Ignored deployment inputs contain the user-supplied Action Group recipient without recording it in Git. A saved remote-state plan has been reviewed: 13 intended creates, 0 changes, and 0 destroys. No project AKS, ACR, Log Analytics workspace, or alert resource exists until that plan is applied.
+Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources now exist. Both AKS nodes are Ready through a dedicated project kubeconfig; ACR has admin access disabled; Container Insights agents are running. Helm values point at the real ACR but retain the intentionally nonexistent `bootstrap` tag. The next gate is to install Argo CD, prove the configured GitHub OIDC flow with a first immutable image, then apply the Application.
 
 ## Phase 0 — Complete Repository Audit
 
@@ -96,12 +96,12 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 5 — Terraform Plan and Apply
 
 - **Objective:** provision one intended Azure environment with no unexpected destruction.
-- **Current state:** the ignored local inputs use Central India, `aksops`, `dev`, two `Standard_D2s_v5` nodes, and the supplied recipient. The saved plan has 13 intended creates, 0 changes, and 0 destroys.
-- **Required changes:** apply only the reviewed saved plan and capture outputs.
+- **Current state:** complete. The ignored local inputs used Central India, `aksops`, `dev`, two `Standard_D2s_v5` nodes, and the supplied recipient. The saved plan applied as 13 creates, 0 changes, and 0 destroys.
+- **Required changes:** none before later operational validation.
 - **Files affected:** ignored `terraform.tfvars`, ignored `tfplan`, status/validation docs.
 - **Commands/actions:** `fmt -check`, `validate`, `plan -out=tfplan`; document adds/changes/destroys and major cost drivers; apply only the reviewed plan.
 - **Expected result:** resource group, VNet/subnet, ACR, AKS, Log Analytics, ACR pull/network roles, Action Group, and three alerts exist.
-- **Validation:** collect outputs; inspect AKS/ACR; `kubectl get nodes` and `kubectl get pods -A` after credentials are acquired locally.
+- **Validation:** outputs were collected; ACR reports Basic SKU/admin disabled; both AKS nodes and system/Container Insights pods are Ready through the dedicated kubeconfig.
 - **Rollback/recovery:** do not run destroy; resolve quota/provider errors with the smallest documented change.
 - **Dependencies:** Phase 4, quota, selected deployment inputs, alert recipient.
 - **Human action required?:** no; recipient input is received and remains untracked.
@@ -109,21 +109,21 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 6 — GitHub to Azure OIDC
 
 - **Objective:** grant CI passwordless, ACR-only publishing access.
-- **Current state:** workflow code is ready; the fork has no Actions secrets/variables and no Entra application/federated credential is known.
-- **Required changes:** create/reuse a dedicated Entra application/service principal; add a main-branch GitHub OIDC federated credential; assign `AcrPush` at the created ACR; set the three `AZURE_*` secrets and three non-secret ACR/image variables.
+- **Current state:** configured. A dedicated Entra application/service principal has one main-branch federation and `AcrPush` at this ACR only. GitHub has the three required `AZURE_*` secrets and three non-secret ACR/image variables; no client secret exists.
+- **Required changes:** prove the configuration with a real workflow run. If `az acr login` shows a same-scope ARM-read authorization error, add only the smallest documented read role at the ACR scope; do not grant subscription or AKS access.
 - **Files affected:** GitHub/Azure configuration and tracking docs; no client secret file.
-- **Commands/actions:** derive `devSatym/azure-aks-gitops-observability`, use subject `repo:devSatym/azure-aks-gitops-observability:ref:refs/heads/main`, and verify with current official Azure/GitHub OIDC guidance.
+- **Commands/actions:** derive the subject dynamically from `gh api repos/devSatym/azure-aks-gitops-observability/actions/oidc/customization/sub --jq .sub_claim_prefix` and append `:ref:refs/heads/main`; the repository currently emits GitHub's immutable subject prefix, so the old name-only subject must not be used.
 - **Expected result:** CI can log in with a short-lived token and push only to the project ACR.
 - **Validation:** a real workflow OIDC login and ACR SHA-tag listing.
 - **Rollback/recovery:** remove only the created federation/RBAC if misconfigured; never broaden to subscription Contributor.
 - **Dependencies:** deployed ACR, Entra/RBAC permission, GitHub repository admin access.
-- **Human action required?:** may be required if tenant policy blocks app/federation creation.
+- **Human action required?:** no; tenant configuration succeeded.
 
 ## Phase 7 — Helm as Desired-State Source
 
 - **Objective:** retain Git/Helm values as the only image source.
-- **Current state:** complete locally: `values.yaml` contains the only image repository/tag values and has a safe bootstrap placeholder.
-- **Required changes:** replace only `image.repository` with the Terraform `acr_login_server/azure-webapp` after apply; CI continues to change only `image.tag`.
+- **Current state:** complete: `values.yaml` is the only image source and its repository is the Terraform-created `acr_login_server/azure-webapp`; `bootstrap` remains a safe non-deployable placeholder until CI promotes a SHA.
+- **Required changes:** CI continues to change only `image.tag`.
 - **Files affected:** `helm/azure-webapp/values.yaml`, status/validation docs.
 - **Commands/actions:** edit the repository value after collecting outputs; run `helm lint` and `helm template`.
 - **Expected result:** no `latest` deployment tag and no conflicting image setting.
@@ -148,8 +148,8 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 9 — GitHub Actions CI to GitOps Promotion
 
 - **Objective:** publish an immutable image then commit the desired tag rather than deploy directly.
-- **Current state:** source is pushed to `origin/main`; GitHub/Argo can now observe the corrected workflow, chart, and Application.
-- **Required changes:** configure external variables/secrets in Phase 6.
+- **Current state:** source is pushed to `origin/main`; the required GitHub configuration is present and the real ACR repository is committed to Helm values.
+- **Required changes:** trigger and inspect the first app-source workflow run.
 - **Files affected:** `.github/workflows/deploy-aks.yml`, Helm values during a real promotion, GitHub configuration.
 - **Commands/actions:** trigger an app change, inspect the exact GitOps diff and commit.
 - **Expected result:** checkout → OIDC → ACR build/push → exact `image.tag` update → bot commit/push; no AKS control step.

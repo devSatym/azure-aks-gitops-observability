@@ -89,3 +89,10 @@
 **Context:** the current default kubeconfig points to an unreachable external GKE production-named context, not this Azure project.
 **Decision:** after AKS provisioning, obtain credentials into a dedicated project kubeconfig file and invoke kubectl/Helm with that explicit configuration. Do not overwrite or use the existing default context.
 **Consequences:** no project validation command can accidentally target an unrelated cluster. The dedicated local kubeconfig remains untracked and must never be committed.
+
+## ADR-014 — Derive the GitHub OIDC subject instead of hard-coding a legacy name-only value
+
+**Status:** accepted and implemented.
+**Context:** GitHub's OIDC customization endpoint for this repository returns an immutable subject prefix containing repository-owner and repository identifiers. A legacy name-only `repo:owner/repo:ref:...` federated credential would not match its emitted token.
+**Decision:** obtain the current prefix from the repository's OIDC customization API at setup time and append the narrowly scoped main-branch reference. Create one Entra federated credential from that exact value.
+**Consequences:** OIDC setup remains compatible with GitHub's current subject model without weakening the federation to another branch, environment, or repository.

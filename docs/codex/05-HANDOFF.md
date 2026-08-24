@@ -2,7 +2,7 @@
 
 ## Where are we?
 
-The project is ready to apply a reviewed Terraform plan and provision application infrastructure. Audit, local source cleanup, a post-audit Terraform correctness pass, provider registration, remote-state bootstrap, and the real plan are complete. Only the dedicated state backend has been created; no AKS/ACR/application resource exists yet.
+The project has a provisioned Azure environment and is ready to install Argo CD, then prove its first CI-to-GitOps delivery. Terraform applied the reviewed plan as 13 adds with no changes or destruction. The application remains intentionally undeployed until CI publishes a real immutable image tag.
 
 ## What works locally?
 
@@ -13,32 +13,33 @@ The project is ready to apply a reviewed Terraform plan and provision applicatio
 - AKS uses Container Insights managed-identity authentication, a kubelet `AcrPull` assignment, and a control-plane subnet `Network Contributor` assignment for its Azure CNI network.
 - Helm values are the sole image source, Argo has no image override, and CI builds/pushes a SHA image then commits only `image.tag`.
 - Alert rules now use current `KubePodInventory` CrashLoop fields and a time-window restart delta.
+- The project ACR is Basic with admin access disabled; the two-node Azure CNI AKS cluster is Ready and Container Insights agents are running.
+- A dedicated Entra application/service principal has a GitHub main-branch federation and ACR-scoped `AcrPush`; the expected GitHub secret and variable names are configured without a client secret.
 
 ## What remains unverified?
 
-- Terraform plan/apply, role effectiveness, ACR, AKS, OIDC, GitHub workflow run, image push, Argo, self-heal, Container Insights, KQL, alerts/email, Prometheus, and Grafana.
+- A real GitHub OIDC login, image push/tag, GitOps promotion commit, Argo installation/application health, workload response, self-heal, telemetry/KQL data, alert delivery, Prometheus, Grafana, and screenshots.
 - README, historical phase guides, architecture image, and screenshot assets are inherited/stale; do not treat them as evidence.
 
 ## Important external facts
 
-- The active Azure subscription was inspected without a subscription switch. It now has the dedicated state backend: `rg-aksops-dev-tfstate`, `staksopsdevtf20260824`, and private `tfstate`; `devops-rg` remains empty and untouched.
+- The active Azure subscription was inspected without a subscription switch. It has the dedicated state backend plus `rg-aksops-dev-n8bo7j`, `aks-aksops-dev-n8bo7j`, `acraksopsdevn8bo7j`, `law-aksops-dev-n8bo7j`, VNet/subnet, Action Group, and three scheduled-query rules; `devops-rg` remains empty and untouched.
 - Required Azure resource providers now report `Registered`.
-- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Corrected source is pushed through `bd6ac01`; no Actions secrets or variables are configured.
+- The GitHub fork is public, `main` is unprotected, and GitHub CLI is authenticated as its administrator. Source is pushed through `82b814e`; its expected Actions secret/variable names are configured. OIDC uses the repository's live immutable subject prefix, not the legacy name-only subject.
 - The default kubeconfig points to an unrelated GKE production-named context. Never run this project's kubectl/Helm commands against it. Use a dedicated, ignored project kubeconfig file once AKS exists.
 
 ## What was last done?
 
-The audit identified and corrected three pre-deployment defects: absent AKS custom-subnet permission, CrashLoop query mismatch, and cumulative restart alert behavior. It also corrected the operating sequence so Argo is installed before, but its Application is applied only after the first real CI-produced image tag exists. A dedicated AzureRM backend was then created, secured with Entra RBAC, and initialized successfully. Ignored deployment inputs were then created, and the saved remote-state plan was reviewed: 13 intended creates, with no changes or destroys.
+The reviewed Terraform plan applied successfully (13 added, 0 changed, 0 destroyed). ACR and AKS baseline checks passed through the dedicated kubeconfig. Helm's image repository was changed to the created ACR while retaining `bootstrap`. A dedicated Entra CI identity, exact GitHub OIDC federation, ACR-scoped `AcrPush`, and the GitHub configuration names were then created.
 
 ## What command/action comes next?
 
-1. Apply the reviewed saved plan.
-2. Collect outputs, update the Helm image repository, then configure Azure/GitHub OIDC and ACR-scoped CI access.
+1. Install Argo CD with Helm into `argocd` using only the dedicated kubeconfig and wait for core pods.
+2. Commit a harmless app change to trigger CI, verify the immutable image/tag and bot's one-field GitOps commit, then apply the Argo Application.
 
 ## What human input is needed?
 
 - Confirm the notification when the controlled alert test occurs.
-- If Azure tenant policy prevents Entra application/federated credential creation, provide the required authorization rather than switching to a client secret.
 - Capture fresh screenshots later; inherited screenshots cannot be used as proof.
 
 ## Safe credential and cluster commands
