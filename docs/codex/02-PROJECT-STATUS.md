@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Technical implementation and runtime validation are complete; fresh owner screenshots are the remaining planned evidence capture.
+The validated v1 implementation and architecture documentation are complete; fresh owner screenshots are the remaining planned evidence capture.
 
 ## Current Status
 
@@ -42,6 +42,7 @@ Repository audit, source cleanup, Terraform correctness corrections, Azure provi
 - Registered Microsoft.ResourceHealth to inspect the failed-pod rule's evaluation health; the rule reports `Available` with no known issues.
 - Ran the controlled alert test safely: `ci-alert-test` started at `2026-08-24T08:57:05+05:30`, exited 1, appeared in KQL as `PodStatus=Failed` / `ContainerStatusReason=Error` at `2026-08-24T03:27:43Z`, and fired the Sev2 failed-pod rule first at `2026-08-24T03:28:47.4605953Z`. Azure Alert Management reported four fired instances before the test pod was deleted.
 - The configured Action Group recipient confirmed delivery of the controlled alert email. The recipient address remains local-only and unrecorded.
+- Improved the README as the v1 architecture baseline: the diagram now shows Terraform state, Azure resource boundaries, scoped identity/RBAC paths, ACR-to-AKS image access, GitOps ownership, workload exposure, and both observability paths.
 - Completed the final repository hygiene scan: no tracked state/local backend files or secret-signature files were found, the local sensitive files remain ignored, and the supplied recipient address does not appear outside the untracked user brief.
 
 ## In Progress
@@ -140,4 +141,4 @@ kubectl --kubeconfig <project-kubeconfig> get nodes
 
 ## Last Updated
 
-2026-08-24, Asia/Kolkata — controlled failed-pod test produced real Sev2 fired alerts and was removed; recipient confirmed Action Group email delivery. Fresh owner screenshots are the remaining planned evidence capture.
+2026-08-24, Asia/Kolkata — the v1 architecture baseline is documented and email delivery is confirmed. Fresh owner screenshots are the remaining planned evidence capture before a separately scoped feature iteration.

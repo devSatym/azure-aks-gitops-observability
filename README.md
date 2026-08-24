@@ -4,6 +4,8 @@ An evidence-led DevOps project that provisions an Azure Kubernetes Service (AKS)
 
 The active application deployment model is **Helm rendered by Argo CD**. GitHub Actions does not obtain AKS credentials or deploy application resources.
 
+> **v1 baseline:** this README describes the validated implementation before any new feature work. Future additions should preserve the CI → Git → Argo ownership boundary and update the documented evidence.
+
 ## Overview
 
 The project is deliberately small: one AKS cluster, one `azure-webapp` workload, one Azure Container Registry (ACR), three Azure Monitor scheduled-query rules, and an in-cluster `kube-prometheus-stack` installation. It demonstrates clear ownership boundaries and records the validation evidence in [`docs/codex/03-VALIDATION.md`](docs/codex/03-VALIDATION.md).
@@ -11,24 +13,83 @@ The project is deliberately small: one AKS cluster, one `azure-webapp` workload,
 ## Architecture
 
 ```mermaid
-flowchart TD
-  Dev[Developer] --> Repo[GitHub repository]
-  Repo --> CI[GitHub Actions]
-  CI -->|short-lived OIDC token| Entra[Microsoft Entra ID]
-  CI --> Build[Docker build]
-  Build --> ACR[Azure Container Registry<br/>azure-webapp:git-sha]
-  CI -->|commit only Helm image.tag| Repo
-  Repo --> Argo[Argo CD]
-  Argo --> Helm[Helm chart and values]
-  Helm --> AKS[Azure Kubernetes Service]
-  AKS --> Insights[Container Insights]
-  Insights --> LAW[Log Analytics workspace]
-  LAW --> KQL[KQL scheduled-query alerts]
-  KQL --> ActionGroup[Azure Monitor Action Group]
-  ActionGroup --> Email[Email notification]
-  AKS --> Prometheus[Prometheus]
-  Prometheus --> Grafana[Grafana]
+flowchart TB
+  Dev[Developer] --> Repo[GitHub repository<br/>main branch]
+
+  subgraph CICD[Source, CI, and GitOps]
+    Repo --> CI[GitHub Actions]
+    CI --> Build[Docker build]
+    Build -->|immutable source SHA tag| ACR
+    CI -->|commits only Helm image.tag| Repo
+    Repo -->|watches main| Argo
+    Argo -->|automated sync, prune, selfHeal| Helm[Helm chart<br/>helm/azure-webapp]
+  end
+
+  subgraph Identity[Identity and scoped access]
+    CI -. short-lived OIDC token .-> Entra[Microsoft Entra ID]
+    Entra -. AcrPush at ACR scope .-> ACR
+    Kubelet[Kubelet managed identity] -. AcrPull at ACR scope .-> ACR
+    ControlPlane[AKS control-plane identity] -. Network Contributor at subnet scope .-> Subnet
+  end
+
+  subgraph State[Terraform state boundary]
+    TF[Terraform operator] -->|Azure CLI / Entra auth| StateStore[Azure Storage<br/>private tfstate container]
+  end
+
+  subgraph Azure[Azure project resource group]
+    TF --> VNet[VNet and AKS subnet]
+    VNet --> Subnet[AKS subnet]
+    TF --> ACR[Basic Azure Container Registry<br/>admin disabled]
+    TF --> AKS[AKS<br/>Azure CNI, two-node pool]
+    TF --> LAW[Log Analytics workspace]
+    TF --> Rules[Three scheduled-query rules<br/>and Action Group]
+
+    subgraph Cluster[AKS cluster]
+      Argo[Argo CD<br/>namespace: argocd]
+      Helm --> App[azure-webapp Deployment<br/>2 replicas, namespace: default]
+      App --> Service[Public LoadBalancer Service]
+      AKS --> Kubelet
+      AKS --> ControlPlane
+      AKS --> AMA[Container Insights / AMA]
+      AKS --> Prom[Prometheus<br/>kube-prometheus-stack]
+    end
+  end
+
+  AMA --> DCR[Terraform-managed<br/>Container Insights DCR + DCRA]
+  DCR --> LAW
+  LAW -->|KQL| Rules
+  Rules --> Email[Action Group email]
+  Browser[Browser / client] --> Service
+  Prom --> Grafana[Grafana<br/>local port-forward]
 ```
+
+### Provisioning and state
+
+Terraform manages the Azure project resource group and its network, AKS, ACR, Log Analytics, DCR/DCRA, alerting, and role assignments. Its remote state is intentionally separate: a private Azure Storage container authenticated through Azure CLI/Microsoft Entra, rather than a storage key or a committed backend coordinate.
+
+### Identity and least-privilege access
+
+| Actor | Access path | Scope / purpose |
+| --- | --- | --- |
+| GitHub Actions | GitHub OIDC → Microsoft Entra application | `AcrPush` on the project ACR; no AKS deployment access |
+| AKS kubelet identity | Azure RBAC | `AcrPull` on the project ACR for workload image pulls |
+| AKS control-plane identity | Azure RBAC | `Network Contributor` on the AKS subnet for Azure CNI networking |
+| Terraform operator | Azure CLI / Entra authentication | Azure Storage Blob Data Contributor for remote state; infrastructure management through Terraform |
+
+### CI-to-GitOps delivery flow
+
+1. A change under `app/` starts GitHub Actions on `main`.
+2. The workflow obtains a short-lived OIDC token, builds `azure-webapp:<source-sha-7>`, and pushes it to ACR.
+3. CI commits only `helm/azure-webapp/values.yaml:image.tag` with the immutable tag.
+4. Argo CD observes Git, renders the Helm chart, and reconciles the two-replica Deployment and public LoadBalancer Service.
+5. Argo CD, not CI, owns deployment, prune, and self-healing.
+
+### Observability and alerting paths
+
+| Path | Flow | Purpose |
+| --- | --- | --- |
+| Azure-native telemetry | AKS → Container Insights/AMA → DCR/DCRA → Log Analytics → KQL rules → Action Group email | Kubernetes inventory, log queries, and Azure Monitor alerts |
+| Kubernetes metrics | AKS → kube-prometheus-stack → Prometheus → Grafana | Cluster, node, namespace, pod, and workload metrics |
 
 ## Problem / Goal
 
@@ -274,7 +335,6 @@ The short ADRs in [`docs/codex/04-DECISIONS.md`](docs/codex/04-DECISIONS.md) exp
 
 - This is a deliberately narrow DevOps demonstration, not a multi-environment platform.
 - It uses a public LoadBalancer Service and local Grafana port-forwarding; it does not add ingress, a custom domain, TLS, private AKS/ACR, or custom application telemetry.
-- Fresh screenshots are owner-captured work, not substitute evidence from inherited files.
 - Fresh screenshots are owner-captured work, not substitute evidence from inherited files.
 - Resource sizing and Log Analytics retention are chosen for the demonstrated environment and should be reassessed for a real workload.
 
