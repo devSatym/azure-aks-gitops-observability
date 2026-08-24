@@ -73,8 +73,10 @@ shape. Everything else remains AzureRM-managed. The deployment uses
    tracks this branch for pre-merge validation. The existing canary continues
    to track `main`.
 4. Validate collector health, generated traffic, Container Insights records,
-   Application Insights tables, native OTLP ingestion, and managed Prometheus
-   queries.
+   native `OTel*` Log Analytics tables, and managed Prometheus queries. The
+   workspace-based Application Insights resource supplies Azure application
+   context but is not assumed to populate the classic `App*` tables for this
+   native OTLP DCR route.
 5. Remove the self-hosted `kube-prometheus-stack` only after the managed metric
    path is proven. Do not remove its CRDs unless a later audit proves they have
    no consumers.
@@ -91,9 +93,9 @@ shape. Everything else remains AzureRM-managed. The deployment uses
   wrapper and render no Jaeger, Prometheus, Grafana, or OpenSearch resources.
 - Argo CD reports `otel-demo` Synced and Healthy; all demo components,
   collector, and load generator are Ready.
-- Azure Monitor shows Container Insights data for `otel-demo`; Application
-  Insights shows requests/dependencies/traces; managed Prometheus returns a
-  non-empty PromQL result.
+- Azure Monitor shows Container Insights data for `otel-demo`; native
+  `OTelSpans`/`OTelEvents`/`OTelLogs`/`OTelResources` contain current demo
+  telemetry; managed Prometheus returns a non-empty PromQL result.
 - A controlled, native OTel Demo fault produces visible failure telemetry and
   is removed afterward.
 - After managed-path validation, no in-cluster self-hosted Prometheus, Grafana,

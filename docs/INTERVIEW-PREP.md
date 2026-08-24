@@ -6,21 +6,21 @@ This guide is grounded in the repository and the recorded validation evidence. I
 
 **Short interview answer:** It provides a small, auditable path from an application source change to an immutable container image, a Git-recorded Kubernetes desired state, an AKS deployment, and observable operational signals.
 
-**Detailed explanation:** The project separates infrastructure provisioning, image publishing, deployment reconciliation, and monitoring. Terraform creates the Azure foundation; GitHub Actions builds and publishes an immutable image and changes only the Helm image tag in Git; Argo CD reconciles that Git state into AKS; Azure Monitor and Prometheus/Grafana provide complementary observability. The aim is a demonstrable delivery pattern, not a claim of production-scale availability or performance.
+**Detailed explanation:** The project separates infrastructure provisioning, image publishing, deployment reconciliation, and monitoring. Terraform creates the Azure foundation; GitHub Actions builds and publishes an immutable canary image and changes only its Helm image tag in Git; Argo CD reconciles that Git state into AKS. Azure Monitor provides platform logs/alerts, managed Prometheus provides metrics, and a workload-identity authenticated OpenTelemetry Collector routes the primary demo's vendor-neutral telemetry to native Azure OTLP ingestion. The aim is a demonstrable delivery pattern, not a claim of production-scale availability or performance.
 
-**Where it exists in this repo:** `main.tf`, `.github/workflows/deploy-aks.yml`, `argocd/azure-webapp-application.yaml`, `helm/azure-webapp/`, and `modules/monitoring`, `modules/container_insights`, and `modules/alerts`.
+**Where it exists in this repo:** `main.tf`, `.github/workflows/deploy-aks.yml`, both Argo Applications, both Helm charts, and `modules/monitoring`, `modules/container_insights`, `modules/managed_prometheus`, `modules/otel_ingestion`, and `modules/alerts`.
 
-**How we validated it:** A source change produced the SHA-tagged image `9d37a77`; the CI run updated only Helm `image.tag`; Argo CD synchronized that desired state; two application pods served the delivery marker. The evidence is recorded in `docs/codex/03-VALIDATION.md`.
+**How we validated it:** A source change produced the SHA-tagged canary image `9d37a77`; the CI run updated only Helm `image.tag`; Argo CD synchronized that desired state; two canary pods served the delivery marker. Separately, the OTel Application became Synced/Healthy with 17 deployments Ready, current managed-Prometheus metrics, and current native `OTel*` rows. The evidence is recorded in `docs/codex/03-VALIDATION.md`.
 
 ## 2. What does Terraform provision?
 
-**Short interview answer:** Terraform provisions the Azure resource group, network, AKS cluster, ACR, Log Analytics workspace, Azure Monitor alerting, required role assignments, and the Container Insights data-collection configuration.
+**Short interview answer:** Terraform provisions the Azure resource group, network, AKS cluster, ACR, Log Analytics workspace, Azure Monitor alerting, Application Insights, managed Prometheus, native OTLP ingestion, scoped identities/RBAC, and Container Insights data collection.
 
-**Detailed explanation:** The reviewed base apply created 13 resources: a project resource group, VNet and AKS subnet, Basic ACR, Log Analytics workspace, AKS cluster, Action Group, three scheduled-query alert rules, ACR pull and subnet network role assignments, and the deterministic name suffix. A later focused apply added the Container Insights DCR and its AKS association. The remote state backend was bootstrapped separately so Terraform can safely manage this configuration.
+**Detailed explanation:** The reviewed base apply created the Azure foundation, and later focused changes added the Container Insights DCR/DCRA. The migration adds a workspace-based Application Insights resource, Azure Monitor workspace, managed Prometheus DCE/DCR/DCRA, native OTLP DCE/DCR, collector user-assigned identity/federated credential/DCR-scoped RBAC, and a small Terraform-owned Kubernetes handoff. The remote state backend was bootstrapped separately so Terraform can safely manage this configuration.
 
-**Where it exists in this repo:** `main.tf` composes the modules; the implementation is under `modules/resource_group`, `modules/network`, `modules/acr`, `modules/aks`, `modules/monitoring`, `modules/container_insights`, and `modules/alerts`.
+**Where it exists in this repo:** `main.tf` composes the modules; implementation includes `modules/application_insights`, `modules/managed_prometheus`, `modules/otel_ingestion`, and `modules/otel_cluster_config` in addition to the base modules.
 
-**How we validated it:** `terraform fmt -check`, `terraform validate`, a reviewed plan with 13 adds and no changes or destroys, the successful base apply, and the later DCR/DCRA apply with two additions were recorded in `docs/codex/03-VALIDATION.md`.
+**How we validated it:** `terraform fmt -check`, `terraform validate`, reviewed applies, and the final no-change remote-state plan are recorded in `docs/codex/03-VALIDATION.md`.
 
 ## 3. How is Terraform state managed?
 
@@ -314,31 +314,31 @@ This guide is grounded in the repository and the recorded validation evidence. I
 
 ## 32. Azure Monitor vs Prometheus?
 
-**Short interview answer:** Azure Monitor/Log Analytics provides Azure-native inventory, logs, KQL, and Azure alerting; Prometheus provides in-cluster metrics scraping, and Grafana visualizes those metrics.
+**Short interview answer:** Container Insights/Log Analytics provides Azure-native inventory, platform logs, KQL, and Azure alerting; Azure Monitor managed Prometheus provides PromQL metrics; native OTLP provides application spans, events, and logs.
 
-**Detailed explanation:** These tools answer related but different questions. Container Insights sends inventory and log streams to Log Analytics under Azure's DCR model, where KQL scheduled queries drive Action Groups. `kube-prometheus-stack` collects Kubernetes and workload metrics locally, and Grafana exposes supplied dashboards. The project deliberately uses both rather than presenting one as a replacement for the other.
+**Detailed explanation:** These paths answer related but different questions. Container Insights sends inventory and platform log streams to Log Analytics under Azure's DCR model, where KQL scheduled queries drive Action Groups. The AKS managed Prometheus add-on writes metrics to an Azure Monitor workspace for PromQL. The official demo emits OTLP to a Collector gateway, which uses AKS workload identity and native Azure OTLP DCE/DCR endpoints; its observed trace/log evidence lands in `OTelSpans`, `OTelEvents`, `OTelLogs`, and `OTelResources`. The self-hosted Prometheus/Grafana baseline was removed after the managed path was proven.
 
-**Where it exists in this repo:** Azure monitoring is implemented in `modules/monitoring`, `modules/container_insights`, and `modules/alerts`; the Prometheus/Grafana deployment is documented in `docs/codex/01-IMPLEMENTATION-PLAN.md` and validation evidence.
+**Where it exists in this repo:** Platform monitoring is implemented in `modules/monitoring`, `modules/container_insights`, and `modules/alerts`; managed metrics in `modules/managed_prometheus`; and native application ingestion in `modules/application_insights`, `modules/otel_ingestion`, and `helm/opentelemetry-demo`.
 
-**How we validated it:** Container Insights configuration and a KQL failed-pod record were observed. Prometheus was healthy with 18/18 active targets and the application replica metric; Grafana reported healthy storage and 29 supplied dashboards.
+**How we validated it:** Container Insights configuration and a KQL failed-pod record were observed. Managed Prometheus returned current payment and HTTP metrics, while the native `OTel*` tables contained current demo spans, events, logs, and resources. The controlled payment-failure window produced observable error traces and logs and was restored.
 
-## 33. What does Grafana show?
+## 33. Where are metrics and application telemetry viewed?
 
-**Short interview answer:** Grafana presents the Prometheus-backed Kubernetes dashboards for cluster, node, namespace, pod, and workload visibility.
+**Short interview answer:** PromQL metrics are queried in the Azure Monitor workspace, platform/trace/log evidence is queried in Log Analytics, and Azure Managed Grafana is available as an optional disabled-by-default visualization service.
 
-**Detailed explanation:** The installed `kube-prometheus-stack` supplies Grafana and Kubernetes-oriented dashboards. Grafana is useful for visual trend and status exploration, while Prometheus remains the query and metrics store beneath it. No custom dashboards, ingress exposure, or password values are stored in this repository.
+**Detailed explanation:** The validated environment intentionally avoids an in-cluster dashboard backend because capacity is constrained to 60 pod slots. Managed Prometheus receives Kubernetes and demo metrics and can be queried with PromQL. Native OTLP trace/log data is stored in Log Analytics `OTel*` tables. Azure Managed Grafana can be enabled only after an explicit cost decision; it is not currently provisioned, and no Grafana password or dashboard credential is stored in the repository.
 
-**Where it exists in this repo:** The monitoring-stack deployment and its validation are documented in `docs/codex/01-IMPLEMENTATION-PLAN.md`, `docs/codex/02-PROJECT-STATUS.md`, and `docs/codex/03-VALIDATION.md`.
+**Where it exists in this repo:** `modules/managed_prometheus`, `modules/managed_grafana`, `modules/otel_ingestion`, and the current status/validation documents describe the managed paths.
 
-**How we validated it:** A local-only port-forward/API check confirmed Grafana database health and 29 supplied dashboards. Prometheus returned the two available `azure-webapp` replicas and all 18 active targets were up; fresh owner-captured dashboard screenshots remain a separate documentation task.
+**How we validated it:** `{__name__="demo.payment.transactions"}` returned current payment USD/CAD samples in the Azure Monitor workspace. A three-minute Log Analytics query returned thousands of current native OTel spans/logs/events/resources. Fresh owner-captured portal screenshots remain a separate documentation task.
 
 ## 34. What are the project's limitations?
 
 **Short interview answer:** It is a focused demonstration environment, not a full production landing zone; several production controls and a portion of the alert proof remain intentionally incomplete.
 
-**Detailed explanation:** The project uses a small two-node AKS cluster, Basic ACR, a public LoadBalancer service, Argo's default project, and a simple nginx application. It does not currently implement HPA, ingress/TLS, Key Vault integration, private endpoints, network policies, production SLOs, image signing/scanning, branch protection, multi-zone resilience, or custom Grafana dashboards. The Azure Monitor failed-pod signal is visible in KQL, a scheduled-rule alert fired, and the recipient confirmed delivery. Fresh owner screenshots remain outstanding.
+**Detailed explanation:** The project uses a small two-node AKS cluster, Basic ACR, public LoadBalancer services, Argo's default project, a small canary, and a capacity-safe 17-deployment OTel Demo profile. It does not currently implement HPA, ingress/TLS, Key Vault integration, private endpoints, network policies, production SLOs, image signing/scanning, branch protection, multi-zone resilience, or a live dashboard service. The Azure Monitor failed-pod signal and a native OTel payment failure are both visible in their respective query paths; fresh owner screenshots remain outstanding.
 
-**Where it exists in this repo:** The current deployment scope is visible in `modules/`, `helm/azure-webapp/`, and `argocd/azure-webapp-application.yaml`; validation status and known gaps are maintained in `docs/codex/02-PROJECT-STATUS.md` and `docs/codex/03-VALIDATION.md`.
+**Where it exists in this repo:** The current deployment scope is visible in `modules/`, both Helm charts, and both Argo Applications; validation status and known gaps are maintained in `docs/codex/02-PROJECT-STATUS.md` and `docs/codex/03-VALIDATION.md`.
 
 **How we validated it:** The limitations follow directly from the checked-in configuration and the validation matrix. They are stated as scope boundaries, not inferred claims about reliability, cost savings, or availability.
 
@@ -360,4 +360,4 @@ This guide is grounded in the repository and the recorded validation evidence. I
 
 **Where it exists in this repo:** The intentionally small Helm chart is in `helm/azure-webapp/`; the project scope and final-documentation requirements are tracked in `plan.md` and `docs/codex/01-IMPLEMENTATION-PLAN.md`.
 
-**How we validated it:** Repository audit confirms there are no active HPA, ingress, Key Vault, or equivalent manifests/modules. The project still validates the selected core path: infrastructure, passwordless CI, immutable image promotion, GitOps reconciliation, Azure monitoring, and Prometheus/Grafana baseline checks.
+**How we validated it:** Repository audit confirms there are no active HPA, ingress, Key Vault, or equivalent manifests/modules. The project still validates the selected core path: infrastructure, passwordless CI, immutable image promotion, GitOps reconciliation, Container Insights, managed Prometheus, and native OpenTelemetry ingestion.

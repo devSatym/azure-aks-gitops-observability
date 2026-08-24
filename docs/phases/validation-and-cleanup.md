@@ -1,6 +1,12 @@
 # Platform Validation and Cleanup
 
-> Historical runbook. Review the current validation and cleanup guidance before making any write or deletion. The application is Argo CD-owned, so it must not be deployed, upgraded, rolled back, or uninstalled as a direct Helm release. Set `PROJECT_KUBECONFIG` to a dedicated AKS kubeconfig before using any Kubernetes command below.
+> Historical runbook. Review the current validation and cleanup guidance in the
+> root README and `docs/codex/05-HANDOFF.md` before making any write or
+> deletion. The self-hosted Prometheus/Grafana sections below are retired; the
+> current environment uses managed Prometheus and native OTLP. Argo CD-owned
+> applications must not be deployed, upgraded, rolled back, or uninstalled as
+> direct Helm releases. Set `PROJECT_KUBECONFIG` to a dedicated AKS kubeconfig
+> before using any Kubernetes command below.
 
 Objective
 

@@ -3,6 +3,11 @@
 Date: 2026-08-24
 Rule: only observed results are marked as validated. No client secret, ACR admin credential, direct CI-to-AKS deployment, or destructive cleanup will be substituted for the intended design.
 
+> Historical v1 plan. The self-hosted Prometheus/Grafana path described below
+> was retired after Azure Monitor managed Prometheus and native OpenTelemetry
+> ingestion were validated. Use `02-PROJECT-STATUS.md`, `03-VALIDATION.md`, and
+> `06-OTEL-IMPLEMENTATION-PLAN.md` for the current implementation.
+
 ## Target Architecture
 
 ```mermaid
@@ -24,7 +29,7 @@ flowchart TD
   Prom --> Grafana[Grafana]
 ```
 
-## Current Gate
+## Historical v1 gate
 
 Azure and GitHub are authenticated and the subscription was inspected without switching it. The dedicated AzureRM backend and all 13 planned project resources exist. Argo CD 3.5.1 is healthy, and the first CI → ACR → Git → Argo delivery is proven: OIDC login succeeded, the immutable source SHA image was pushed, the bot changed only Helm `image.tag`, Argo synchronized it, and the LoadBalancer served the updated page. Argo self-heal restored a temporary replica drift from four to two. Prometheus/Grafana are healthy. Azure-native telemetry exposed one source gap: the AKS add-on runs in managed-identity mode, but no Container Insights DCR/DCRA was created. The reviewed Terraform correction has now applied as exactly two additions (DCR and association); Azure Monitor ingestion is in its documented propagation window before KQL validation resumes.
 
@@ -278,7 +283,7 @@ Azure and GitHub are authenticated and the subscription was inspected without sw
 ## Phase 19 — Prometheus and Grafana
 
 - **Objective:** validate Kubernetes infrastructure metrics alongside Azure-native observability.
-- **Current state:** complete baseline. Helm chart `kube-prometheus-stack` 88.5.4 is deployed in `monitoring`; operator, Prometheus, Grafana, Alertmanager, kube-state-metrics, and two node exporters are Running.
+- **Historical outcome:** the v1 baseline deployed Helm chart `kube-prometheus-stack` 88.5.4 in `monitoring`; operator, Prometheus, Grafana, Alertmanager, kube-state-metrics, and two node exporters were Running. The release has since been retired; see the current OTel plan/status documents.
 - **Required changes:** none; no Ingress, TLS, or custom dashboard was added.
 - **Files affected:** cluster Helm release and tracking docs.
 - **Commands/actions:** add/update chart repository, install, wait for pods, port-forward Grafana, generate modest application traffic, review supplied Kubernetes dashboards.

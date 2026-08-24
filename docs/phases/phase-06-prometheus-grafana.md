@@ -1,6 +1,10 @@
 # Phase 6 — Prometheus and Grafana
 
-> Historical phase note: this guide describes the monitoring-stack installation pattern. Use a dedicated project kubeconfig for every Helm or `kubectl` command, and consult `docs/codex/03-validation.md` for live evidence.
+> Retired historical phase: the current environment uses Azure Monitor managed
+> Prometheus and native Azure OTLP instead. Do not execute this installation
+> path on the 60-pod live cluster. The retained Prometheus Operator CRDs are not
+> a request to reinstall the stack. Consult `docs/codex/03-VALIDATION.md` for
+> current evidence.
 
 Objective
 

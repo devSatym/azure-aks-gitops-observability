@@ -35,12 +35,19 @@
 **Decision:** use a main-branch GitHub federated credential and grant `AcrPush` at the project ACR scope. Do not introduce an Azure client secret or enable ACR admin credentials.
 **Consequences:** short-lived credentials and least privilege; Entra/GitHub configuration is a required external setup step.
 
-## ADR-006 — Two complementary monitoring paths
+## ADR-006 — Superseded v1 monitoring topology
 
-**Status:** accepted.
-**Context:** Azure Monitor/Container Insights serves Azure-native inventory, logs, KQL alerting, and Action Groups; Prometheus/Grafana serves Kubernetes metrics and dashboards.
-**Decision:** retain both without adding Loki, Tempo, OpenTelemetry, or custom dashboards.
-**Consequences:** scope remains focused while telemetry purpose is clear.
+**Status:** superseded by ADR-016 and ADR-017.
+**Context:** the v1 implementation used Azure Monitor/Container Insights for
+platform logs and alerts plus an in-cluster Prometheus/Grafana stack for
+metrics.
+**Decision:** retain Container Insights and its KQL alert path, replace the
+self-hosted metrics stack with Azure Monitor managed Prometheus, and add
+native OTLP ingestion for application telemetry. Do not add Loki, Tempo, or
+custom dashboards.
+**Consequences:** the v1 self-hosted stack remains historical validation
+evidence only. The live three-path design and its capacity constraints are
+documented in ADR-016 and ADR-017.
 
 ## ADR-007 — Retire raw manifests
 
@@ -103,3 +110,41 @@
 **Context:** the AKS `oms_agent` block enabled managed-identity monitoring and deployed healthy `ama-logs` pods, but Azure created neither the Container Insights Data Collection Rule nor its association. The agent reported missing DCR JSON and no pod/node records reached Log Analytics. Current Microsoft AKS MSI-onboarding Terraform guidance declares both resources in addition to the AKS add-on.
 **Decision:** retain managed-identity authentication and add a Terraform-managed Container Insights DCR with the standard pod/node/container streams plus a DCR association targeted at this AKS cluster. Do not revert to workspace keys, enable ACR admin credentials, or add unrelated monitoring products.
 **Consequences:** the monitoring topology becomes declarative and reviewable. The correction adds no compute resource; once active, its intentional full stream set incurs normal Log Analytics ingestion cost and must be validated before controlled alert testing.
+
+## ADR-016 — Send vendor-neutral application telemetry through native Azure OTLP
+
+**Status:** accepted and live validated.
+**Context:** the official OpenTelemetry Demo is already instrumented and must
+remain vendor-neutral. Application Insights needs an Azure-native ingestion
+path without committing a connection string or adding Azure SDK code to every
+demo service.
+**Decision:** deploy the OpenTelemetry Collector Contrib distribution as a
+gateway. It authenticates by AKS workload identity to a user-assigned managed
+identity with `Monitoring Metrics Publisher` scoped to a Terraform-managed
+native OTLP DCR. The DCR/DCE route traces and logs to the existing Log
+Analytics workspace and metrics to the Azure Monitor workspace, while an
+Application Insights reference provides Azure application context. Terraform
+owns only the namespace, annotated collector ServiceAccount, and non-secret
+endpoint ConfigMap; Argo CD owns the charted collector Deployment.
+**Consequences:** no instrumentation key or connection string is stored in Git.
+The DCR's detailed `Microsoft-OTel-*` data-source streams are distinct from
+the case-sensitive aggregate `Microsoft-OTLP-Traces` and
+`Microsoft-OTLP-Logs` request URL streams. A desired-state revision annotation
+rolls the collector whenever Terraform changes its external endpoint ConfigMap.
+
+## ADR-017 — Use managed Prometheus and fit the demo to the quota-constrained cluster
+
+**Status:** accepted and live validated.
+**Context:** the Central India subscription has only four available DSv5 vCPUs,
+which supports the existing two `Standard_D2s_v5` nodes but rejects a temporary
+third node. The two-node cluster permits 60 pods. After the managed metrics
+add-on was enabled, the full 22-pod upstream demo plus the seven-pod
+`kube-prometheus-stack` would not fit.
+**Decision:** validate Azure Monitor managed Prometheus first, retire only the
+`kube-prometheus-stack` Helm release while retaining Prometheus Operator CRDs,
+and disable five ancillary, dependency-free demo components in the wrapper.
+The retained 17-pod demo preserves the storefront, checkout, messaging, load
+generator, Collector, and multi-language service paths.
+**Consequences:** the live cluster runs at 59/60 pods, so no self-hosted stack
+or extra demo replicas may be added. Restore the complete upstream component
+set only after a quota/capacity increase.
