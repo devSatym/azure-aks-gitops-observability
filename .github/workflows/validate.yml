@@ -1,0 +1,69 @@
+name: Validate Terraform and Helm
+
+on:
+  pull_request:
+    paths:
+      - "**/*.tf"
+      - ".terraform.lock.hcl"
+      - "helm/**"
+      - "argocd/**"
+      - ".github/workflows/validate.yml"
+  push:
+    branches:
+      - main
+      - "feature/**"
+    paths:
+      - "**/*.tf"
+      - ".terraform.lock.hcl"
+      - "helm/**"
+      - "argocd/**"
+      - ".github/workflows/validate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize providers without remote state
+        run: terraform init -backend=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+  helm:
+    name: Helm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Add the official OpenTelemetry Helm repository
+        run: helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+
+      - name: Build pinned dependencies
+        run: helm dependency build helm/opentelemetry-demo
+
+      - name: Lint charts
+        run: |
+          helm lint helm/azure-webapp
+          helm lint helm/opentelemetry-demo
+
+      - name: Render desired state
+        run: |
+          helm template platform-canary helm/azure-webapp --namespace default > /tmp/platform-canary.yaml
+          helm template opentelemetry-demo helm/opentelemetry-demo --namespace otel-demo > /tmp/opentelemetry-demo.yaml

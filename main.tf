@@ -5,7 +5,10 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  name_prefix = "${var.project_name}-${var.environment}-${random_string.suffix.result}"
+  name_prefix                         = "${var.project_name}-${var.environment}-${random_string.suffix.result}"
+  otel_namespace                      = "otel-demo"
+  otel_collector_service_account_name = "otel-collector"
+  otel_endpoint_config_map_name       = "otel-azure-otlp-config"
 
   tags = {
     Environment = var.environment
@@ -50,6 +53,16 @@ module "monitoring" {
   tags                = local.tags
 }
 
+module "application_insights" {
+  source = "./modules/application_insights"
+
+  name_prefix                = local.name_prefix
+  location                   = module.resource_group.location
+  resource_group_name        = module.resource_group.name
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.tags
+}
+
 module "alerts" {
   source = "./modules/alerts"
 
@@ -83,6 +96,60 @@ module "container_insights" {
   aks_name                   = module.aks.aks_name
   aks_id                     = module.aks.aks_id
   log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.tags
+}
+
+module "managed_prometheus" {
+  source = "./modules/managed_prometheus"
+
+  name_prefix         = local.name_prefix
+  location            = module.resource_group.location
+  resource_group_name = module.resource_group.name
+  aks_name            = module.aks.aks_name
+  aks_id              = module.aks.aks_id
+  tags                = local.tags
+}
+
+module "otel_ingestion" {
+  source = "./modules/otel_ingestion"
+
+  name_prefix                    = local.name_prefix
+  location                       = module.resource_group.location
+  resource_group_name            = module.resource_group.name
+  application_insights_id        = module.application_insights.id
+  azure_monitor_workspace_id     = module.managed_prometheus.workspace_id
+  log_analytics_workspace_id     = module.monitoring.log_analytics_workspace_id
+  oidc_issuer_url                = module.aks.oidc_issuer_url
+  namespace                      = local.otel_namespace
+  collector_service_account_name = local.otel_collector_service_account_name
+  tags                           = local.tags
+}
+
+module "otel_cluster_config" {
+  source = "./modules/otel_cluster_config"
+
+  providers = {
+    kubernetes = kubernetes
+  }
+
+  namespace                      = local.otel_namespace
+  collector_service_account_name = local.otel_collector_service_account_name
+  collector_client_id            = module.otel_ingestion.collector_client_id
+  endpoint_config_map_name       = local.otel_endpoint_config_map_name
+  traces_endpoint                = module.otel_ingestion.collector_traces_endpoint
+  logs_endpoint                  = module.otel_ingestion.collector_logs_endpoint
+  metrics_endpoint               = module.otel_ingestion.collector_metrics_endpoint
+}
+
+module "managed_grafana" {
+  source = "./modules/managed_grafana"
+
+  enabled                    = var.enable_managed_grafana
+  name_prefix                = local.name_prefix
+  location                   = module.resource_group.location
+  resource_group_name        = module.resource_group.name
+  azure_monitor_workspace_id = module.managed_prometheus.workspace_id
+  application_insights_id    = module.application_insights.id
   tags                       = local.tags
 }
 

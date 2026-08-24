@@ -1,4 +1,6 @@
-replicaCount: 2
+# The original app remains a deliberately small CI -> ACR -> GitOps canary.
+# The OpenTelemetry Demo is the primary observability workload.
+replicaCount: 1
 
 image:
   # GitHub Actions changes only image.tag after pushing an immutable SHA image.
@@ -7,7 +9,7 @@ image:
   pullPolicy: IfNotPresent
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
   targetPort: 80
 

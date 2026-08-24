@@ -1,0 +1,11 @@
+apiVersion: v2
+name: opentelemetry-demo
+description: Azure-native GitOps configuration for the official OpenTelemetry Demo
+type: application
+version: 0.1.0
+appVersion: "3.0.0"
+
+dependencies:
+  - name: opentelemetry-demo
+    version: 0.41.0
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
