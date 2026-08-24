@@ -29,7 +29,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "aks_node_not_ready" {
       KubeNodeInventory
       | where TimeGenerated > ago(15m)
       | summarize arg_max(TimeGenerated, *) by Computer
-      | where Status != "Ready"
+      | where Status !contains "Ready"
     KQL
 
     time_aggregation_method = "Count"
@@ -65,7 +65,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "aks_pod_failed" {
     query = <<-KQL
       KubePodInventory
       | where TimeGenerated > ago(15m)
-      | where PodStatus == "Failed" or ContainerStatus contains "CrashLoopBackOff"
+      | where PodStatus == "Failed" or (ContainerStatus == "waiting" and ContainerStatusReason in~ ("CrashLoopBackOff", "Error"))
     KQL
 
     time_aggregation_method = "Count"
@@ -101,8 +101,9 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "aks_pod_restarts" {
     query = <<-KQL
       KubePodInventory
       | where TimeGenerated > ago(15m)
-      | summarize RestartCount=max(ContainerRestartCount) by Name, Namespace
-      | where RestartCount > 2
+      | summarize MaxRestartCount = max(ContainerRestartCount), MinRestartCount = min(ContainerRestartCount) by Name, Namespace, ContainerName
+      | extend RestartDelta = MaxRestartCount - MinRestartCount
+      | where RestartDelta > 2
     KQL
 
     time_aggregation_method = "Count"
