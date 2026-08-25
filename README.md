@@ -891,10 +891,6 @@ All 20 temporary-capture images are embedded in the narrative above and indexed 
 
 The retired numbered screenshots are not included because they describe an earlier architecture rather than this temporary capture profile.
 
-## How I Would Explain This Project in an Interview
-
-> I built a reusable Azure AKS platform where Terraform owns the cloud foundation and a few explicit Kubernetes identity handoffs, while Argo CD owns Helm-rendered workload state. I used the upstream OpenTelemetry Demo as a realistic microservice workload and configured its collector to use AKS workload identity for Azure-native OTLP ingestion. Kubernetes health goes to Container Insights, application traces/logs/events/resources appear in Log Analytics OTel tables, and Prometheus-format application metrics reach an Azure Monitor workspace. GitHub Actions validates the Terraform and Helm sources; for a small canary it uses OIDC to push a Git-SHA image and commits only the desired image tag, after which Argo CD reconciles. I validated the design with running nodes, GitOps health, a public demo endpoint, native telemetry queries, a multi-service trace, application metrics, and alert rules, while keeping the high-volume capture environment explicitly separate from the main profile.
-
 ## Key Takeaways
 
 - The repository documents a real control-plane split: Terraform for Azure platform resources, GitHub Actions for canary image promotion, and Argo CD for workload reconciliation.
