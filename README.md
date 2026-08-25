@@ -404,11 +404,26 @@ The workload boundary is equally intentional:
 - The small <code>azure-webapp</code> canary is currently one replica behind a ClusterIP service on port 80; it is not the public demo entry point.
 - The collector is a one-replica gateway deployment with requests of 200m CPU / 256Mi memory and limits of 500m CPU / 512Mi memory.
 
-### Temporary Azure Inventory Evidence
+### Capture story: Azure foundation and cluster capacity
 
-<a href="docs/screenshots/capture-02-resource-group.png"><img src="docs/screenshots/capture-02-resource-group.png" alt="Temporary East US Azure resource group inventory with redacted subscription information" width="900"></a>
+<table>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-02-resource-group.png"><img src="docs/screenshots/capture-02-resource-group.png" alt="Temporary East US Azure resource group inventory" width="100%"></a>
+<br><strong>1. Terraform-provisioned Azure foundation.</strong><br>
+The resource inventory brings the AKS cluster, ACR, Log Analytics workspace, Azure Monitor workspace, Application Insights, Data Collection Rules, alert rules, and virtual network into one temporary East US environment.
+</td>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-03-aks-overview.png"><img src="docs/screenshots/capture-03-aks-overview.png" alt="Running AKS control plane in the temporary East US environment" width="100%"></a>
+<br><strong>2. Running AKS control plane.</strong><br>
+The cluster overview confirms a completed operation, the East US location, Azure CNI Overlay, and the connected registry before workload delivery begins.
+</td>
+</tr>
+</table>
 
-*Temporary capture evidence.* The redacted resource inventory shows the AKS cluster, ACR, Log Analytics workspace, Azure Monitor workspace, Application Insights, Data Collection Rules, alert rules, and virtual network represented by this Terraform composition.
+<a href="docs/screenshots/capture-03b-node-pool.png"><img src="docs/screenshots/capture-03b-node-pool.png" alt="Two-node AKS system pool ready for the temporary capture environment" width="900"></a>
+
+*Temporary capture evidence.* **3. Two-node system pool ready.** The capture profile has its own capacity boundary: two Ready nodes on the temporary East US pool, isolated from the Central India main-release configuration.
 
 ## GitOps with Argo CD
 
@@ -422,11 +437,18 @@ Argo CD is the Kubernetes desired-state controller. It is not provisioned by Ter
 
 Terraform owns the <code>otel-demo</code> namespace, collector ServiceAccount, and endpoint ConfigMap because these are platform handoffs. Argo CD owns the Helm-rendered workload resources. Keeping these ownership lines explicit avoids competing reconcilers.
 
-### Captured GitOps Evidence
+### Capture story: GitOps reconciliation
 
 <a href="docs/screenshots/capture-04-argocd-application.png"><img src="docs/screenshots/capture-04-argocd-application.png" alt="Temporary capture Argo CD application shown as Synced and Healthy" width="900"></a>
 
-*Temporary capture evidence.* The feature-branch Application is shown as **Synced** and **Healthy** with a reconciled resource tree. It is proof of the GitOps control loop for the temporary profile, not a claim that the main Application tracks that branch.
+*Temporary capture evidence.* **4. Argo CD convergence: Synced and Healthy.** The isolated Application has reconciled its Helm source and resource tree. This proves the GitOps control loop for the temporary profile; it does not imply that the main Application tracks the feature branch.
+
+<details open>
+<summary><strong>5. Complete desired-state-to-pod resource tree.</strong> Open the full capture to inspect every reconciled workload, Service, and healthy pod.</summary>
+
+<br>
+<a href="docs/screenshots/capture-04b-argocd-application.png"><img src="docs/screenshots/capture-04b-argocd-application.png" alt="Full Argo CD resource tree for the temporary telemetry capture application" width="900"></a>
+</details>
 
 ## OpenTelemetry Demo Workload
 
@@ -446,21 +468,50 @@ The capture overlay restores accounting, ad, fraud-detection, image-provider, an
 
 The packaged load generator supplies ongoing synthetic activity. Its effective traffic is flagd-controlled in the capture profile, where five HTTP users plus one browser user were observed; the wrapper's <code>LOAD_GENERATOR_VUS=3</code> environment value is only a fallback and is not presented here as the active traffic setting.
 
+### Runtime readiness and public entry point
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-01-terminal-readiness.png"><img src="docs/screenshots/capture-01-terminal-readiness.png" alt="Terminal verification of ready nodes, healthy Argo CD application, and available demo deployments" width="100%"></a>
+<br><strong>6. Runtime readiness gate.</strong><br>
+Independent terminal checks show two Ready nodes, a Synced and Healthy Argo CD Application, and the captured demo deployments available before public traffic is exercised.
+</td>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-05a-public-loadbalancer.png"><img src="docs/screenshots/capture-05a-public-loadbalancer.png" alt="Frontend proxy LoadBalancer service with a public entry point" width="100%"></a>
+<br><strong>7. Public frontend entry point.</strong><br>
+The <code>frontend-proxy</code> LoadBalancer supplies the bridge from browser traffic to the OpenTelemetry Demo workload and its downstream telemetry path.
+</td>
+</tr>
+</table>
+
 ### Application Journey
 
-The following two browser captures are deliberately limited to a safe, non-PII storefront journey. Checkout/address/order screenshots and a terminal/image that expose personal local context are intentionally excluded from this public README.
+The controlled temporary-environment journey below turns a healthy platform into meaningful request traffic. It progresses from storefront browsing to a seeded checkout and completion, creating the application activity later visible in the traces, logs, and metrics.
 
 <table>
 <tr>
 <td width="50%" valign="top">
 <a href="docs/screenshots/capture-05b-storefront-home.png"><img src="docs/screenshots/capture-05b-storefront-home.png" alt="Temporary capture OpenTelemetry Demo storefront" width="100%"></a>
-<br><strong>1. Storefront</strong><br>
+<br><strong>8. Storefront.</strong><br>
 The public demo reaches the upstream Astronomy Shop user experience through the temporary capture endpoint.
 </td>
 <td width="50%" valign="top">
 <a href="docs/screenshots/capture-05c-product-page.png"><img src="docs/screenshots/capture-05c-product-page.png" alt="Temporary capture OpenTelemetry Demo product page" width="100%"></a>
-<br><strong>2. Product interaction</strong><br>
+<br><strong>9. Product interaction.</strong><br>
 Browsing a product exercises the frontend and its downstream dependencies, complementing continuous synthetic load.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-05d-cart-checkout.png"><img src="docs/screenshots/capture-05d-cart-checkout.png" alt="Temporary capture cart and sample checkout form" width="100%"></a>
+<br><strong>10. Sample checkout.</strong><br>
+The cart preserves the selected item, pricing, shipping choice, and checkout form state before the order is submitted.
+</td>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-05e-order-complete.png"><img src="docs/screenshots/capture-05e-order-complete.png" alt="Temporary capture completed OpenTelemetry Demo order" width="100%"></a>
+<br><strong>11. Order completion.</strong><br>
+A completed demo order confirms the customer-facing path and produces realistic cross-service traffic for the observability pipeline.
 </td>
 </tr>
 </table>
@@ -493,7 +544,7 @@ Container Insights is configured with one-minute collection, ContainerLogV2, and
 
 <a href="docs/screenshots/capture-06-container-insights.png"><img src="docs/screenshots/capture-06-container-insights.png" alt="Temporary capture Container Insights showing two ready nodes and Kubernetes telemetry" width="900"></a>
 
-*Temporary capture evidence.* Two Ready nodes and Container Insights views establish the Kubernetes-health layer that complements request-level application telemetry. Azure Managed Grafana is disabled in both profiles; the portal's generic Grafana navigation is not evidence of an enabled Managed Grafana resource.
+*Temporary capture evidence.* **12. Kubernetes health at a glance.** Two Ready nodes and Container Insights views establish the Kubernetes-health layer that complements request-level application telemetry. Azure Managed Grafana is disabled in both profiles; the portal's generic Grafana navigation is not evidence of an enabled Managed Grafana resource.
 
 ### Native OpenTelemetry Records in Log Analytics
 
@@ -501,7 +552,7 @@ The collector uses workload identity and direct Azure Monitor ingestion URLs for
 
 <a href="docs/screenshots/capture-07-native-otel-records.png"><img src="docs/screenshots/capture-07-native-otel-records.png" alt="Temporary capture Log Analytics results for OTel spans events logs and resources" width="900"></a>
 
-*Temporary capture evidence.* The image shows all four native OTel tables with non-zero records over a 30-minute query window. The current captured values are 104,703 spans, 34,735 events, 31,324 logs, and 9,296 resources; counts naturally vary with the selected time window and traffic volume.
+*Temporary capture evidence.* **13. All four native OTel tables receiving data.** The image shows non-zero records over a 30-minute query window: 104,703 spans, 34,735 events, 31,324 logs, and 9,296 resources. Counts naturally vary with the selected time window and traffic volume.
 
 ~~~kusto
 union withsource=TableName OTelSpans, OTelEvents, OTelLogs, OTelResources
@@ -516,7 +567,7 @@ This is not a classic Application Insights SDK ingestion claim: the observed app
 
 <a href="docs/screenshots/capture-08-service-performance.png"><img src="docs/screenshots/capture-08-service-performance.png" alt="Temporary capture service performance query showing spans traces p95 duration and errors by service" width="900"></a>
 
-*Temporary capture evidence.* This query summarizes spans, distinct traces, P95 duration, and error count by service. Seventeen instrumented application services produced spans; several Ready workload deployments are datastores, control components, or documentation and are therefore not expected to produce application spans.
+*Temporary capture evidence.* **14. Per-service spans, traces, P95, and errors.** This query summarizes spans, distinct traces, P95 duration, and error count by service. Seventeen instrumented application services produced spans; several Ready workload deployments are datastores, control components, or documentation and are therefore not expected to produce application spans.
 
 ~~~kusto
 OTelSpans
@@ -534,7 +585,7 @@ OTelSpans
 
 <a href="docs/screenshots/capture-09-distributed-trace.png"><img src="docs/screenshots/capture-09-distributed-trace.png" alt="Temporary capture distributed checkout trace across multiple OpenTelemetry Demo services" width="900"></a>
 
-*Temporary capture evidence.* One selected trace traverses twelve participating services, including load generation, the frontend path, cart, checkout, currency, shipping, quote, payment, flagd, and email. This is the operational bridge between a user journey and precise dependency, latency, and failure-path analysis.
+*Temporary capture evidence.* **15. Single checkout trace across 12 services.** One selected trace traverses load generation, the frontend path, cart, checkout, currency, shipping, quote, payment, flagd, and email. This is the operational bridge between a user journey and precise dependency, latency, and failure-path analysis.
 
 ~~~kusto
 let selectedTrace = toscalar(
@@ -563,18 +614,18 @@ The managed Prometheus route is intentionally distinct from the collector's dire
 <tr>
 <td width="50%" valign="top">
 <a href="docs/screenshots/capture-10a-payment-transactions-graph.png"><img src="docs/screenshots/capture-10a-payment-transactions-graph.png" alt="Temporary capture Managed Prometheus graph for payment transactions" width="100%"></a>
-<br><strong>Graph view.</strong> The payment transaction metric has active series during the capture window.
+<br><strong>16. Payment transactions by currency.</strong> The payment transaction metric has active series during the capture window.
 </td>
 <td width="50%" valign="top">
 <a href="docs/screenshots/capture-10b-managed-prometheus-payment-grid.png"><img src="docs/screenshots/capture-10b-managed-prometheus-payment-grid.png" alt="Temporary capture Managed Prometheus grid for payment transactions" width="100%"></a>
-<br><strong>Grid view.</strong> The metric is grouped by payment service and payment currency dimensions.
+<br><strong>17. Payment metric labels and values.</strong> The metric is grouped by payment service and payment currency dimensions.
 </td>
 </tr>
 </table>
 
 ~~~promql
 sum by ("service.name", "demo.payment.currency") (
-  rate({__name__="demo.payment.transactions"}[5m])
+  increase({__name__="demo.payment.transactions"}[1h])
 )
 ~~~
 
@@ -590,9 +641,20 @@ Terraform configures three enabled scheduled-query rules against the Log Analyti
 | Failed or CrashLoopBackOff pod | 2 | 5 minutes / 15 minutes | Surface unhealthy workloads |
 | Restart delta greater than 2 | 3 | 5 minutes / 15 minutes | Detect restart churn |
 
-<a href="docs/screenshots/capture-11b-alert-rules.png"><img src="docs/screenshots/capture-11b-alert-rules.png" alt="Temporary capture Azure Monitor alert rules enabled for nodes pods and restarts" width="900"></a>
-
-*Temporary capture evidence.* The redacted Azure Monitor list confirms the three capture-environment rules are enabled. Action Group recipient information is intentionally not included.
+<table>
+<tr>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-11a-log-analytics-daily-cap.png"><img src="docs/screenshots/capture-11a-log-analytics-daily-cap.png" alt="Temporary capture Log Analytics daily ingestion cap configured at five gigabytes per day" width="100%"></a>
+<br><strong>18. Capture ingestion cap: 5 GB/day.</strong><br>
+The temporary Log Analytics cap bounds the evidence run's ingestion exposure while preserving enough signal volume for a meaningful validation window.
+</td>
+<td width="50%" valign="top">
+<a href="docs/screenshots/capture-11b-alert-rules.png"><img src="docs/screenshots/capture-11b-alert-rules.png" alt="Temporary capture Azure Monitor alert rules enabled for nodes pods and restarts" width="100%"></a>
+<br><strong>19. Three enabled AKS alert rules.</strong><br>
+The redacted Azure Monitor list confirms coverage for node readiness, failed or CrashLooping pods, and restart churn.
+</td>
+</tr>
+</table>
 
 Cost controls are scoped honestly:
 
@@ -601,6 +663,12 @@ Cost controls are scoped honestly:
 - Log Analytics uses the PerGB2018 SKU with 30-day retention.
 - The main profile leaves the Log Analytics cap unlimited and defaults Application Insights to 100 GB/day.
 - The temporary capture profile uses a 5 GB/day cap for both Log Analytics and Application Insights. It is a short-lived evidence guardrail, **not** a billing guarantee or permanent production policy; usage reporting/enforcement can lag.
+
+### Final acceptance check
+
+<a href="docs/screenshots/capture-12-final-health-check.png"><img src="docs/screenshots/capture-12-final-health-check.png" alt="Final terminal verification of ready nodes, healthy Argo CD application, ready deployments, and HTTP 200 response" width="900"></a>
+
+*Temporary capture evidence.* **20. End-to-end acceptance: ready, healthy, HTTP 200.** The closing verification ties the story together: nodes are Ready, Argo CD is Synced and Healthy, the demo deployments are available, and the public frontend responds successfully.
 
 ## CI and Delivery Automation
 
@@ -794,21 +862,32 @@ These are future options, not present-tense claims:
 
 ## Live Evidence Index
 
-All listed images are the selected, safe temporary-capture evidence described in the disclaimer above. They are used contextually in the README and indexed here for quick review.
+All 20 temporary-capture images are embedded in the narrative above and indexed here in reading order. Together they show the full path from Azure foundation through a public order and into operational telemetry, guardrails, and final acceptance.
 
-| Capability | Evidence | What to notice |
-| --- | --- | --- |
-| Azure platform inventory | [Resource group](docs/screenshots/capture-02-resource-group.png) | Redacted temporary resource group contains the platform building blocks. |
-| GitOps reconciliation | [Argo CD Application](docs/screenshots/capture-04-argocd-application.png) | Synced and Healthy feature-branch capture Application. |
-| Storefront journey | [Storefront](docs/screenshots/capture-05b-storefront-home.png) and [product page](docs/screenshots/capture-05c-product-page.png) | Safe browser interaction proof for the public demo. |
-| Kubernetes monitoring | [Container Insights](docs/screenshots/capture-06-container-insights.png) | Two Ready nodes and Kubernetes telemetry views. |
-| Native signal ingestion | [OTel records](docs/screenshots/capture-07-native-otel-records.png) | Non-zero spans, events, logs, and resources. |
-| Service analysis | [Service performance](docs/screenshots/capture-08-service-performance.png) | Spans, traces, P95 duration, and errors by service. |
-| Trace correlation | [Distributed trace](docs/screenshots/capture-09-distributed-trace.png) | One multi-service checkout trace. |
-| Application metrics | [Prometheus graph](docs/screenshots/capture-10a-payment-transactions-graph.png) and [grid](docs/screenshots/capture-10b-managed-prometheus-payment-grid.png) | Payment transaction metric and dimensions. |
-| Alert configuration | [Enabled alert rules](docs/screenshots/capture-11b-alert-rules.png) | Node, pod, and restart rules enabled without exposing recipients. |
+| Step | Evidence | What it proves |
+| ---: | --- | --- |
+| 1 | [Azure foundation](docs/screenshots/capture-02-resource-group.png) | The temporary resource group contains the platform building blocks. |
+| 2 | [AKS control plane](docs/screenshots/capture-03-aks-overview.png) | The capture cluster is running with the intended network profile and registry connection. |
+| 3 | [System node pool](docs/screenshots/capture-03b-node-pool.png) | Two nodes are ready to run the capture workload. |
+| 4 | [Argo CD summary](docs/screenshots/capture-04-argocd-application.png) | The capture Application is Synced and Healthy. |
+| 5 | [Argo CD resource tree](docs/screenshots/capture-04b-argocd-application.png) | Desired state resolves to healthy workload resources and pods. |
+| 6 | [Runtime readiness](docs/screenshots/capture-01-terminal-readiness.png) | Nodes, deployments, and GitOps state pass an independent terminal gate. |
+| 7 | [Public entry point](docs/screenshots/capture-05a-public-loadbalancer.png) | The frontend is exposed through the capture LoadBalancer. |
+| 8 | [Storefront](docs/screenshots/capture-05b-storefront-home.png) | The browser reaches the demo experience. |
+| 9 | [Product interaction](docs/screenshots/capture-05c-product-page.png) | A product request exercises the application path. |
+| 10 | [Sample checkout](docs/screenshots/capture-05d-cart-checkout.png) | Cart and checkout state are available before submission. |
+| 11 | [Order completion](docs/screenshots/capture-05e-order-complete.png) | A completed demo order produces realistic traffic. |
+| 12 | [Container Insights](docs/screenshots/capture-06-container-insights.png) | Kubernetes health is visible across the cluster. |
+| 13 | [Native OTel records](docs/screenshots/capture-07-native-otel-records.png) | Traces, events, logs, and resources are arriving in native tables. |
+| 14 | [Service performance](docs/screenshots/capture-08-service-performance.png) | Per-service spans, traces, latency, and error data are queryable. |
+| 15 | [Distributed trace](docs/screenshots/capture-09-distributed-trace.png) | One checkout request is correlated across multiple services. |
+| 16 | [Payment metric graph](docs/screenshots/capture-10a-payment-transactions-graph.png) | Managed Prometheus records payment transactions by currency. |
+| 17 | [Payment metric values](docs/screenshots/capture-10b-managed-prometheus-payment-grid.png) | The metric exposes its service and currency dimensions. |
+| 18 | [Ingestion cap](docs/screenshots/capture-11a-log-analytics-daily-cap.png) | The temporary evidence run has a 5 GB/day cost guardrail. |
+| 19 | [Alert rules](docs/screenshots/capture-11b-alert-rules.png) | Node, pod, and restart alerts are enabled. |
+| 20 | [Final health check](docs/screenshots/capture-12-final-health-check.png) | The platform finishes Ready, Synced, Healthy, and responsive. |
 
-The intentionally omitted capture files either expose personal local context, contain checkout-like PII, reveal temporary billing detail, are too unreadable for a public README, or could be mistaken for the main profile. The inherited architecture image and deleted numbered screenshot set are not used because they describe an earlier architecture.
+The retired numbered screenshots are not included because they describe an earlier architecture rather than this temporary capture profile.
 
 ## How I Would Explain This Project in an Interview
 
@@ -818,7 +897,7 @@ The intentionally omitted capture files either expose personal local context, co
 
 - The repository documents a real control-plane split: Terraform for Azure platform resources, GitHub Actions for canary image promotion, and Argo CD for workload reconciliation.
 - The demo proves operational observability with Azure-native data paths, not a generic “monitoring installed” claim.
-- The root README keeps live evidence useful without exposing personal information, recipient details, backend coordinates, credentials, or temporary billing screenshots.
+- The root README presents the temporary capture in a clear sequence so each visual proof is interpreted in the context of the platform stage it validates.
 - The project’s most useful next conversation is not “does it deploy?” but how to evolve its consciously non-production choices into a hardened multi-environment platform.
 
 ## Credits
