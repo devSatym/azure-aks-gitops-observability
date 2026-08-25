@@ -26,6 +26,24 @@ variable "node_vm_size" {
   type = string
 }
 
+variable "network_plugin_mode" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "pod_cidr" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+variable "node_max_pods" {
+  type     = number
+  default  = null
+  nullable = true
+}
+
 variable "log_analytics_workspace_id" {
   type = string
 }

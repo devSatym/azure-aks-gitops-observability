@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  # A deliberately distinct name makes this temporary application impossible to
+  # confuse with the released main-cluster application during teardown.
+  name: opentelemetry-demo-capture
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/devSatym/azure-aks-gitops-observability.git
+    # Keep the temporary environment on its isolated branch. Do not point the
+    # existing Central India application at this revision.
+    targetRevision: feature/telemetry-capture-eastus
+    path: helm/opentelemetry-demo
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-capture-full.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: otel-demo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,18 @@
+# Branch-only overlay for the temporary East US telemetry-capture cluster.
+#
+# The base values.yaml remains capacity-safe for the existing Central India
+# cluster. Argo CD in the temporary cluster merges this file after values.yaml,
+# restoring the five core upstream services that were omitted solely because of
+# the original cluster's 60-pod Azure CNI ceiling.
+opentelemetry-demo:
+  components:
+    accounting:
+      enabled: true
+    ad:
+      enabled: true
+    fraud-detection:
+      enabled: true
+    image-provider:
+      enabled: true
+    telemetry-docs:
+      enabled: true
