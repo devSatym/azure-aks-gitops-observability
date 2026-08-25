@@ -11,7 +11,17 @@ An evidence-backed Azure platform that provisions AKS with Terraform, reconciles
 
 **Azure • AKS • Terraform • Argo CD • Helm • GitHub Actions • OpenTelemetry • Azure Monitor • Managed Prometheus • Log Analytics**
 
-**Navigate:** [Overview](#platform-at-a-glance) · [Architecture](#architecture) · [Infrastructure](#infrastructure-as-code) · [GitOps](#gitops-with-argo-cd) · [Workload](#opentelemetry-demo-workload) · [Observability](#azure-native-observability) · [Quick start](#quick-start) · [Evidence](#live-evidence-index) · [Security](#security-posture)
+**Navigate:**
+
+- [Overview](#platform-at-a-glance)
+- [Architecture](#architecture)
+- [Infrastructure](#infrastructure-as-code)
+- [GitOps](#gitops-with-argo-cd)
+- [Workload](#opentelemetry-demo-workload)
+- [Observability](#azure-native-observability)
+- [Quick start](#quick-start)
+- [Evidence](#live-evidence-index)
+- [Security](#security-posture)
 
 ## Platform at a Glance
 
