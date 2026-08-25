@@ -903,7 +903,3 @@ The retired numbered screenshots are not included because they describe an earli
 - The demo proves operational observability with Azure-native data paths, not a generic “monitoring installed” claim.
 - The root README presents the temporary capture in a clear sequence so each visual proof is interpreted in the context of the platform stage it validates.
 - The project’s most useful next conversation is not “does it deploy?” but how to evolve its consciously non-production choices into a hardened multi-environment platform.
-
-## Credits
-
-The OpenTelemetry Demo is an upstream project used here as a representative workload. This repository builds on the learning direction of [rambabu-eng/azure-aks-terraform-cicd-monitoring](https://github.com/rambabu-eng/azure-aks-terraform-cicd-monitoring) while implementing and documenting its own Azure-native GitOps and observability configuration.
